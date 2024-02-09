@@ -4,6 +4,8 @@ use std::ops::AddAssign;
 
 use crate::{rand_bytes, vec_add};
 
+pub mod privacy;
+
 /// VDAF execution error.
 pub struct Error();
 
@@ -22,7 +24,7 @@ pub trait Vdaf<const NS: usize, const KS: usize>: Sized {
     type Measurement;
     type Result;
     type Field: AddAssign;
-    type PublicShare;
+    type PublicShare: Clone;
     type InputShare;
     type PrepState;
     type PrepShare;
@@ -33,14 +35,15 @@ pub trait Vdaf<const NS: usize, const KS: usize>: Sized {
     fn shard(
         &self,
         measurement: &Self::Measurement,
-        pk: &[u8; KS],
-    ) -> Result<[ReportShare<Self, NS, KS>; 2], Error>;
+        nonce: &[u8; NS],
+        coins: &[u8; KS],
+    ) -> Result<(Self::PublicShare, [Self::InputShare; 2]), Error>;
 
     /// Aggregator begins preparation of a report.
     fn prep_init(
         &self,
         vk: &[u8; KS],
-        agg_id: u8,
+        id: u8,
         agg_param: &Self::AggParam,
         report_share: &ReportShare<Self, NS, KS>,
     ) -> Result<(Self::PrepState, Self::PrepShare), Error>;
@@ -65,6 +68,28 @@ pub trait Vdaf<const NS: usize, const KS: usize>: Sized {
     /// Length of the encoded aggregate.
     fn agg_len(&self) -> usize;
 
+    fn shard_into_report_shares(
+        &self,
+        measurement: &Self::Measurement,
+    ) -> Result<[ReportShare<Self, NS, KS>; 2], Error> {
+        let nonce = rand_bytes();
+        let coins = rand_bytes();
+        let (public_share, [input_share_0, input_share_1]) =
+            self.shard(measurement, &nonce, &coins)?;
+        Ok([
+            ReportShare {
+                public_share: public_share.clone(),
+                input_share: input_share_0,
+                nonce,
+            },
+            ReportShare {
+                public_share,
+                input_share: input_share_1,
+                nonce,
+            },
+        ])
+    }
+
     /// Execute the VDAF on the measurements and return the aggregate result.
     fn run(
         &self,
@@ -76,7 +101,8 @@ pub trait Vdaf<const NS: usize, const KS: usize>: Sized {
         let (agg_share_0, agg_share_1) = measurements
             .iter()
             .map(|measurement| {
-                let [report_share_0, report_share_1] = self.shard(measurement, &rand_bytes())?;
+                let [report_share_0, report_share_1] =
+                    self.shard_into_report_shares(measurement)?;
                 let (prep_state_0, prep_share_0) =
                     self.prep_init(&vk, 0, agg_param, &report_share_0)?;
                 let (prep_state_1, prep_share_1) =
