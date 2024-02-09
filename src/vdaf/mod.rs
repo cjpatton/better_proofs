@@ -10,17 +10,14 @@ pub mod privacy;
 pub struct Error();
 
 /// VDAF report share sent by each Client to an Aggregator.
-pub struct ReportShare<V, const NS: usize, const KS: usize>
-where
-    V: Vdaf<NS, KS>,
-{
-    pub nonce: [u8; NS],
+pub struct ReportShare<V: Vdaf<KS>, const KS: usize> {
+    pub nonce: [u8; 16],
     pub public_share: V::PublicShare,
     pub input_share: V::InputShare,
 }
 
 /// Syntax for a 1-round, 2-party VDAF.
-pub trait Vdaf<const NS: usize, const KS: usize>: Sized {
+pub trait Vdaf<const KS: usize>: Sized {
     type Measurement;
     type Result;
     type Field: AddAssign;
@@ -35,7 +32,7 @@ pub trait Vdaf<const NS: usize, const KS: usize>: Sized {
     fn shard(
         &self,
         measurement: &Self::Measurement,
-        nonce: &[u8; NS],
+        nonce: &[u8; 16],
         coins: &[u8; KS],
     ) -> Result<(Self::PublicShare, [Self::InputShare; 2]), Error>;
 
@@ -45,7 +42,7 @@ pub trait Vdaf<const NS: usize, const KS: usize>: Sized {
         vk: &[u8; KS],
         id: u8,
         agg_param: &Self::AggParam,
-        report_share: &ReportShare<Self, NS, KS>,
+        report_share: &ReportShare<Self, KS>,
     ) -> Result<(Self::PrepState, Self::PrepShare), Error>;
 
     /// Aggregator finishes preparation of a report and obtains its output share.
@@ -71,7 +68,7 @@ pub trait Vdaf<const NS: usize, const KS: usize>: Sized {
     fn shard_into_report_shares(
         &self,
         measurement: &Self::Measurement,
-    ) -> Result<[ReportShare<Self, NS, KS>; 2], Error> {
+    ) -> Result<[ReportShare<Self, KS>; 2], Error> {
         let nonce = rand_bytes();
         let coins = rand_bytes();
         let (public_share, [input_share_0, input_share_1]) =

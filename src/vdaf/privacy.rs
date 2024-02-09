@@ -3,7 +3,7 @@
 use super::{Error, ReportShare, Vdaf};
 
 /// Interface for attacker playing the real or ideal game.
-pub trait Game<V: Vdaf<NS, KS>, const NS: usize, const KS: usize> {
+pub trait Game<V: Vdaf<KS>, const KS: usize> {
     /// Initialize the game with  verification key `vk` and corrupt Aggregator `id`.
     fn init(&mut self, vk: [u8; KS], id: u8) -> Result<(), Error>;
 
@@ -13,7 +13,7 @@ pub trait Game<V: Vdaf<NS, KS>, const NS: usize, const KS: usize> {
         &mut self,
         i: usize,
         measurement: &V::Measurement,
-    ) -> Result<ReportShare<V, NS, KS>, Error>;
+    ) -> Result<ReportShare<V, KS>, Error>;
 
     /// Command the honest Aggregator to initialize preparation of report `i` with the given
     /// aggregation parameter and return its prep share.
@@ -35,16 +35,16 @@ pub trait Game<V: Vdaf<NS, KS>, const NS: usize, const KS: usize> {
 }
 
 /// Privacy Attacker.
-pub trait Attacker<V: Vdaf<NS, KS>, const NS: usize, const KS: usize> {
-    fn play(&self, game: &mut impl Game<V, NS, KS>) -> bool;
+pub trait Attacker<V: Vdaf<KS>, const KS: usize> {
+    fn play(&self, game: &mut impl Game<V, KS>) -> bool;
 }
 
 /// Real privacy game.
-pub struct Real<V: Vdaf<NS, KS>, const NS: usize, const KS: usize> {
+pub struct Real<V: Vdaf<KS>, const KS: usize> {
     pub vdaf: V,
 }
 
-impl<V: Vdaf<NS, KS>, const NS: usize, const KS: usize> Game<V, NS, KS> for Real<V, NS, KS> {
+impl<V: Vdaf<KS>, const KS: usize> Game<V, KS> for Real<V, KS> {
     fn init(&mut self, _vk: [u8; KS], _id: u8) -> Result<(), Error> {
         todo!()
     }
@@ -53,7 +53,7 @@ impl<V: Vdaf<NS, KS>, const NS: usize, const KS: usize> Game<V, NS, KS> for Real
         &mut self,
         _i: usize,
         _measurement: &V::Measurement,
-    ) -> Result<ReportShare<V, NS, KS>, Error> {
+    ) -> Result<ReportShare<V, KS>, Error> {
         todo!()
     }
 
@@ -83,7 +83,7 @@ mod tests {
 
     struct InsecureVdaf;
 
-    impl Vdaf<16, 16> for InsecureVdaf {
+    impl Vdaf<16> for InsecureVdaf {
         type Measurement = ();
         type Result = ();
         type Field = i32; // Not a field
@@ -108,7 +108,7 @@ mod tests {
             _vk: &[u8; 16],
             _id: u8,
             _agg_param: &Self::AggParam,
-            _report_share: &ReportShare<Self, 16, 16>,
+            _report_share: &ReportShare<Self, 16>,
         ) -> Result<(Self::PrepState, Self::PrepShare), Error> {
             todo!()
         }
@@ -139,8 +139,8 @@ mod tests {
     /// This attacker just executes the protocol faifthully.
     struct BenignAttacker;
 
-    impl Attacker<InsecureVdaf, 16, 16> for BenignAttacker {
-        fn play(&self, _game: &mut impl Game<InsecureVdaf, 16, 16>) -> bool {
+    impl Attacker<InsecureVdaf, 16> for BenignAttacker {
+        fn play(&self, _game: &mut impl Game<InsecureVdaf, 16>) -> bool {
             todo!()
         }
     }
