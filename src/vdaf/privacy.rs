@@ -124,8 +124,7 @@ mod tests {
         fn unshard(
             &self,
             _agg_param: &Self::AggParam,
-            _agg_share_0: Vec<Self::Field>,
-            _agg_share_1: Vec<Self::Field>,
+            _agg_shares: [Vec<Self::Field>; 2],
             _num_measurements: usize,
         ) -> Result<Self::Result, Error> {
             todo!()

@@ -57,8 +57,7 @@ pub trait Vdaf<const KS: usize>: Sized {
     fn unshard(
         &self,
         agg_param: &Self::AggParam,
-        agg_share_0: Vec<Self::Field>,
-        agg_share_1: Vec<Self::Field>,
+        agg_shares: [Vec<Self::Field>; 2],
         num_measurements: usize,
     ) -> Result<Self::Result, Error>;
 
@@ -95,7 +94,7 @@ pub trait Vdaf<const KS: usize>: Sized {
     ) -> Result<Self::Result, Error> {
         debug_assert!(!measurements.is_empty());
         let vk = rand_bytes();
-        let (agg_share_0, agg_share_1) = measurements
+        let agg_shares = measurements
             .iter()
             .map(|measurement| {
                 let [report_share_0, report_share_1] =
@@ -109,17 +108,17 @@ pub trait Vdaf<const KS: usize>: Sized {
                 let out_share_1 = self.prep_finish(prep_state_1, &prep_shares)?;
                 debug_assert_eq!(out_share_0.len(), self.agg_len());
                 debug_assert_eq!(out_share_1.len(), self.agg_len());
-                Ok((out_share_0, out_share_1))
+                Ok([out_share_0, out_share_1])
             })
             .reduce(|agg, out| {
-                let (agg_share_0, agg_share_1) = agg?;
-                let (out_share_0, out_share_1) = out?;
-                Ok((
+                let [agg_share_0, agg_share_1] = agg?;
+                let [out_share_0, out_share_1] = out?;
+                Ok([
                     vec_add(agg_share_0, out_share_0),
                     vec_add(agg_share_1, out_share_1),
-                ))
+                ])
             })
             .unwrap()?;
-        self.unshard(agg_param, agg_share_0, agg_share_1, measurements.len())
+        self.unshard(agg_param, agg_shares, measurements.len())
     }
 }
