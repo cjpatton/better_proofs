@@ -33,13 +33,6 @@ pub trait Game<V: Vdaf> {
     fn agg(&mut self, agg_param: &V::AggParam) -> Result<Vec<V::Field>, Error>;
 }
 
-/// Privacy attacker.
-pub trait Attacker<V: Vdaf> {
-    /// Run the game, then output `true` if we are played the [`Real`] game and `false` if we
-    /// played the [`Ideal`] game.
-    fn play(&self, game: &mut impl Game<V>) -> bool;
-}
-
 /// Real privacy game.
 pub struct Real<V: Vdaf> {
     pub vdaf: V,
@@ -118,7 +111,7 @@ impl<V: Vdaf> Game<V> for Ideal<V> {
 
 #[cfg(test)]
 mod test_insecure_vdaf {
-    use crate::vdaf::Vdaf;
+    use crate::{vdaf::Vdaf, Distinguisher};
 
     use super::*;
 
@@ -182,8 +175,8 @@ mod test_insecure_vdaf {
 
     struct InsecureVdafAttacker;
 
-    impl Attacker<InsecureVdaf> for InsecureVdafAttacker {
-        fn play(&self, _game: &mut impl Game<InsecureVdaf>) -> bool {
+    impl<G: Game<InsecureVdaf>> Distinguisher<G> for InsecureVdafAttacker {
+        fn play(&self, _game: &mut G) -> bool {
             todo!()
         }
     }
