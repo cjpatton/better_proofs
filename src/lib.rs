@@ -6,8 +6,8 @@ use rand::prelude::*;
 
 pub mod vdaf;
 
-fn rand_bytes<const S: usize>() -> [u8; S] {
-    let mut bytes = [0; S];
+fn rand_bytes(size: usize) -> Vec<u8> {
+    let mut bytes = vec![0; size];
     thread_rng().fill(&mut bytes[..]);
     bytes
 }

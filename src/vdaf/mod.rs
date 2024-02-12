@@ -10,14 +10,18 @@ pub mod privacy;
 pub struct Error();
 
 /// VDAF report share sent by each Client to an Aggregator.
-pub struct ReportShare<V: Vdaf<KS>, const KS: usize> {
-    pub nonce: [u8; 16],
+pub struct ReportShare<V: Vdaf> {
+    pub nonce: Vec<u8>,
     pub public_share: V::PublicShare,
     pub input_share: V::InputShare,
 }
 
 /// Syntax for a 1-round, 2-party VDAF.
-pub trait Vdaf<const KS: usize>: Sized {
+pub trait Vdaf: Sized {
+    const VERIFY_KEY_SIZE: usize;
+    const RAND_SIZE: usize;
+    const NONCE_SIZE: usize;
+
     type Measurement;
     type Result;
     type Field: AddAssign;
@@ -32,17 +36,17 @@ pub trait Vdaf<const KS: usize>: Sized {
     fn shard(
         &self,
         measurement: &Self::Measurement,
-        nonce: &[u8; 16],
-        coins: &[u8; KS],
+        nonce: &[u8],
+        coins: &[u8],
     ) -> Result<(Self::PublicShare, [Self::InputShare; 2]), Error>;
 
     /// Aggregator begins preparation of a report.
     fn prep_init(
         &self,
-        vk: &[u8; KS],
+        vk: &[u8],
         id: u8,
         agg_param: &Self::AggParam,
-        report_share: &ReportShare<Self, KS>,
+        report_share: &ReportShare<Self>,
     ) -> Result<(Self::PrepState, Self::PrepShare), Error>;
 
     /// Aggregator finishes preparation of a report and obtains its output share.
@@ -67,16 +71,16 @@ pub trait Vdaf<const KS: usize>: Sized {
     fn shard_into_report_shares(
         &self,
         measurement: &Self::Measurement,
-    ) -> Result<[ReportShare<Self, KS>; 2], Error> {
-        let nonce = rand_bytes();
-        let coins = rand_bytes();
+    ) -> Result<[ReportShare<Self>; 2], Error> {
+        let nonce = rand_bytes(Self::NONCE_SIZE);
+        let coins = rand_bytes(Self::NONCE_SIZE);
         let (public_share, [input_share_0, input_share_1]) =
             self.shard(measurement, &nonce, &coins)?;
         Ok([
             ReportShare {
                 public_share: public_share.clone(),
                 input_share: input_share_0,
-                nonce,
+                nonce: nonce.clone(),
             },
             ReportShare {
                 public_share,
@@ -93,7 +97,7 @@ pub trait Vdaf<const KS: usize>: Sized {
         agg_param: &Self::AggParam,
     ) -> Result<Self::Result, Error> {
         debug_assert!(!measurements.is_empty());
-        let vk = rand_bytes();
+        let vk = rand_bytes(Self::VERIFY_KEY_SIZE);
         let agg_shares = measurements
             .iter()
             .map(|measurement| {

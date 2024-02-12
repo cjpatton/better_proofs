@@ -3,17 +3,13 @@
 use super::{Error, ReportShare, Vdaf};
 
 /// Interface for attacker playing the real or ideal game.
-pub trait Game<V: Vdaf<KS>, const KS: usize> {
+pub trait Game<V: Vdaf> {
     /// Initialize the game with  verification key `vk` and corrupt Aggregator `id`.
-    fn init(&mut self, vk: [u8; KS], id: u8) -> Result<(), Error>;
+    fn init(&mut self, vk: &[u8], id: u8) -> Result<(), Error>;
 
     /// Command Client `i` to generate a report for the given measurement, send the honest
     /// Aggregator its report share, and return the corrupt Aggregator's report share.
-    fn shard(
-        &mut self,
-        i: usize,
-        measurement: &V::Measurement,
-    ) -> Result<ReportShare<V, KS>, Error>;
+    fn shard(&mut self, i: usize, measurement: &V::Measurement) -> Result<ReportShare<V>, Error>;
 
     /// Command the honest Aggregator to initialize preparation of report `i` with the given
     /// aggregation parameter and return its prep share.
@@ -35,25 +31,21 @@ pub trait Game<V: Vdaf<KS>, const KS: usize> {
 }
 
 /// Privacy Attacker.
-pub trait Attacker<V: Vdaf<KS>, const KS: usize> {
-    fn play(&self, game: &mut impl Game<V, KS>) -> bool;
+pub trait Attacker<V: Vdaf> {
+    fn play(&self, game: &mut impl Game<V>) -> bool;
 }
 
 /// Real privacy game.
-pub struct Real<V: Vdaf<KS>, const KS: usize> {
+pub struct Real<V: Vdaf> {
     pub vdaf: V,
 }
 
-impl<V: Vdaf<KS>, const KS: usize> Game<V, KS> for Real<V, KS> {
-    fn init(&mut self, _vk: [u8; KS], _id: u8) -> Result<(), Error> {
+impl<V: Vdaf> Game<V> for Real<V> {
+    fn init(&mut self, _vk: &[u8], _id: u8) -> Result<(), Error> {
         todo!()
     }
 
-    fn shard(
-        &mut self,
-        _i: usize,
-        _measurement: &V::Measurement,
-    ) -> Result<ReportShare<V, KS>, Error> {
+    fn shard(&mut self, _i: usize, _measurement: &V::Measurement) -> Result<ReportShare<V>, Error> {
         todo!()
     }
 
@@ -83,7 +75,11 @@ mod tests {
 
     struct InsecureVdaf;
 
-    impl Vdaf<16> for InsecureVdaf {
+    impl Vdaf for InsecureVdaf {
+        const VERIFY_KEY_SIZE: usize = 0;
+        const NONCE_SIZE: usize = 16;
+        const RAND_SIZE: usize = 0;
+
         type Measurement = ();
         type Result = ();
         type Field = i32; // Not a field
@@ -97,18 +93,18 @@ mod tests {
         fn shard(
             &self,
             _measurement: &Self::Measurement,
-            _nonce: &[u8; 16],
-            _coins: &[u8; 16],
+            _nonce: &[u8],
+            _coins: &[u8],
         ) -> Result<(Self::PublicShare, [Self::InputShare; 2]), Error> {
             todo!()
         }
 
         fn prep_init(
             &self,
-            _vk: &[u8; 16],
+            _vk: &[u8],
             _id: u8,
             _agg_param: &Self::AggParam,
-            _report_share: &ReportShare<Self, 16>,
+            _report_share: &ReportShare<Self>,
         ) -> Result<(Self::PrepState, Self::PrepShare), Error> {
             todo!()
         }
@@ -138,8 +134,8 @@ mod tests {
     /// This attacker just executes the protocol faifthully.
     struct BenignAttacker;
 
-    impl Attacker<InsecureVdaf, 16> for BenignAttacker {
-        fn play(&self, _game: &mut impl Game<InsecureVdaf, 16>) -> bool {
+    impl Attacker<InsecureVdaf> for BenignAttacker {
+        fn play(&self, _game: &mut impl Game<InsecureVdaf>) -> bool {
             todo!()
         }
     }
