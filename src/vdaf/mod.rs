@@ -73,7 +73,7 @@ pub trait Vdaf: Sized {
         measurement: &Self::Measurement,
     ) -> Result<[ReportShare<Self>; 2], Error> {
         let nonce = rand_bytes(Self::NONCE_SIZE);
-        let coins = rand_bytes(Self::NONCE_SIZE);
+        let coins = rand_bytes(Self::RAND_SIZE);
         let (public_share, [input_share_0, input_share_1]) =
             self.shard(measurement, &nonce, &coins)?;
         Ok([
