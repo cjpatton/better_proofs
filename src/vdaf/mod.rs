@@ -5,6 +5,7 @@ use std::ops::AddAssign;
 use crate::{rand_bytes, vec_add};
 
 pub mod private;
+pub mod robust;
 
 /// VDAF execution error.
 pub struct Error();
@@ -29,7 +30,6 @@ pub trait Vdaf: Sized {
     type InputShare;
     type PrepState;
     type PrepShare;
-    type PrepMsg;
     type AggParam;
 
     /// Client generates its report.

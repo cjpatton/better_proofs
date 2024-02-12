@@ -19,3 +19,10 @@ fn vec_add<F: AddAssign>(mut u: Vec<F>, v: Vec<F>) -> Vec<F> {
     }
     u
 }
+
+/// A generic distinguishing adversary.
+pub trait Distinguisher<G> {
+    /// Run the game, then output `true` if we are playing the real game and `false` if we playing
+    /// the ideal game.
+    fn play(&self, game: &mut G) -> bool;
+}

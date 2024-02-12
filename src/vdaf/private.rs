@@ -137,7 +137,6 @@ mod test_insecure_vdaf {
         type InputShare = ();
         type PrepState = ();
         type PrepShare = ();
-        type PrepMsg = ();
         type AggParam = ();
 
         fn shard(
