@@ -4,6 +4,9 @@ use super::{Error, ReportShare, Vdaf};
 
 /// Interface for attacker playing the real or ideal game.
 pub trait Game<V: Vdaf> {
+    /// Construct an instance of the game with the given VDAF.
+    fn with(vdaf: V) -> Self;
+
     /// Initialize the game with  verification key `vk` and corrupt Aggregator `id`.
     fn init(&mut self, vk: &[u8], id: u8) -> Result<(), Error>;
 
@@ -17,7 +20,7 @@ pub trait Game<V: Vdaf> {
 
     /// Command the honest Aggregator to finish preparation of report `i` with the given
     /// aggregation parameter and store the output share. Return an indication of whether the
-    /// Aggregator successfuly recovered an output share.
+    /// Aggregator successfully recovered an output share.
     fn prep_finish(
         &mut self,
         i: usize,
@@ -30,8 +33,10 @@ pub trait Game<V: Vdaf> {
     fn agg(&mut self, agg_param: &V::AggParam) -> Result<Vec<V::Field>, Error>;
 }
 
-/// Privacy Attacker.
+/// Privacy attacker.
 pub trait Attacker<V: Vdaf> {
+    /// Run the game, then output `true` if we are played the [`Real`] game and `false` if we
+    /// played the [`Ideal`] game.
     fn play(&self, game: &mut impl Game<V>) -> bool;
 }
 
@@ -41,6 +46,50 @@ pub struct Real<V: Vdaf> {
 }
 
 impl<V: Vdaf> Game<V> for Real<V> {
+    fn with(_vdaf: V) -> Self {
+        todo!()
+    }
+
+    fn init(&mut self, _vk: &[u8], _id: u8) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn shard(&mut self, _i: usize, _measurement: &V::Measurement) -> Result<ReportShare<V>, Error> {
+        todo!()
+    }
+
+    fn prep_init(&mut self, _i: usize, _agg_param: &V::AggParam) -> Result<V::PrepShare, Error> {
+        todo!()
+    }
+
+    fn prep_finish(
+        &mut self,
+        _i: usize,
+        _agg_param: &V::AggParam,
+        _prep_shares: [V::PrepShare; 2],
+    ) -> Result<bool, Error> {
+        todo!()
+    }
+
+    fn agg(&mut self, _agg_param: &V::AggParam) -> Result<Vec<V::Field>, Error> {
+        todo!()
+    }
+}
+
+/// Privacy simulator. Its job is to fool the adversary into believing it is playing the [`Real`]
+/// game when in fact it is playing the [`Ideal`] game.
+pub trait Simulator<V: Vdaf> {}
+
+/// Ideal privacy game.
+pub struct Ideal<V: Vdaf> {
+    pub vdaf: V,
+}
+
+impl<V: Vdaf> Game<V> for Ideal<V> {
+    fn with(_vdaf: V) -> Self {
+        todo!()
+    }
+
     fn init(&mut self, _vk: &[u8], _id: u8) -> Result<(), Error> {
         todo!()
     }
@@ -68,11 +117,12 @@ impl<V: Vdaf> Game<V> for Real<V> {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_insecure_vdaf {
     use crate::vdaf::Vdaf;
 
     use super::*;
 
+    /// A VDAF that has a trivial privacy attack.
     struct InsecureVdaf;
 
     impl Vdaf for InsecureVdaf {
@@ -131,18 +181,24 @@ mod tests {
         }
     }
 
-    /// This attacker just executes the protocol faifthully.
-    struct BenignAttacker;
+    struct InsecureVdafAttacker;
 
-    impl Attacker<InsecureVdaf> for BenignAttacker {
+    impl Attacker<InsecureVdaf> for InsecureVdafAttacker {
         fn play(&self, _game: &mut impl Game<InsecureVdaf>) -> bool {
             todo!()
         }
     }
 
     #[test]
-    fn benign_real() {
-        let mut real = Real { vdaf: InsecureVdaf };
-        assert_eq!(BenignAttacker {}.play(&mut real), true);
+    fn insecure_vdaf() {
+        assert_eq!(
+            InsecureVdafAttacker.play(&mut Real::with(InsecureVdaf)),
+            true
+        );
+
+        assert_eq!(
+            InsecureVdafAttacker.play(&mut Ideal::with(InsecureVdaf)),
+            true
+        );
     }
 }

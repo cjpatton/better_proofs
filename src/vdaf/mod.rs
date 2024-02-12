@@ -4,7 +4,7 @@ use std::ops::AddAssign;
 
 use crate::{rand_bytes, vec_add};
 
-pub mod privacy;
+pub mod private;
 
 /// VDAF execution error.
 pub struct Error();
