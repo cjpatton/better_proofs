@@ -6,6 +6,8 @@ use rand::prelude::*;
 
 pub mod vdaf;
 
+pub type Error = &'static str;
+
 fn rand_bytes(size: usize) -> Vec<u8> {
     let mut bytes = vec![0; size];
     thread_rng().fill(&mut bytes[..]);
@@ -24,5 +26,5 @@ fn vec_add<F: AddAssign>(mut u: Vec<F>, v: Vec<F>) -> Vec<F> {
 pub trait Distinguisher<G> {
     /// Run the game, then output `true` if we are playing the real game and `false` if we playing
     /// the ideal game.
-    fn play(&self, game: &mut G) -> bool;
+    fn play(&self, game: &mut G) -> Result<bool, Error>;
 }

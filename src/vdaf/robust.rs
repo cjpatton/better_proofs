@@ -1,4 +1,7 @@
 //! Games for defining robustness.
+//!
+//! Define $ p_1 $
+//!
 
 use super::{Error, ReportShare, Vdaf};
 

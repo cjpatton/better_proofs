@@ -2,13 +2,13 @@
 
 use super::{Error, ReportShare, Vdaf};
 
-/// Interface for attacker playing the real or ideal game.
+/// Interface for an attacker playing the real or ideal game.
 pub trait Game<V: Vdaf> {
     /// Construct an instance of the game with the given VDAF.
     fn with(vdaf: V) -> Self;
 
-    /// Initialize the game with  verification key `vk` and corrupt Aggregator `id`.
-    fn init(&mut self, vk: &[u8], id: u8) -> Result<(), Error>;
+    /// Initialize the game with verification key and corrupt Aggregator.
+    fn init(&mut self, corrupt_vk: &[u8], corrupt_id: u8) -> Result<(), Error>;
 
     /// Command Client `i` to generate a report for the given measurement, send the honest
     /// Aggregator its report share, and return the corrupt Aggregator's report share.
@@ -35,19 +35,24 @@ pub trait Game<V: Vdaf> {
 
 /// Real privacy game.
 pub struct Real<V: Vdaf> {
-    pub vdaf: V,
+    vdaf: V,
+    init: Option<(Vec<u8>, u8)>, // corrupt_vk, corrupt_id
 }
 
 impl<V: Vdaf> Game<V> for Real<V> {
-    fn with(_vdaf: V) -> Self {
-        todo!()
+    fn with(vdaf: V) -> Self {
+        Self { vdaf, init: None }
     }
 
-    fn init(&mut self, _vk: &[u8], _id: u8) -> Result<(), Error> {
-        todo!()
+    fn init(&mut self, corrupt_vk: &[u8], corrupt_id: u8) -> Result<(), Error> {
+        if self.init.is_some() {
+            return Err("already initialized");
+        }
+        self.init = Some((corrupt_vk.to_owned(), corrupt_id));
+        Ok(())
     }
 
-    fn shard(&mut self, _i: usize, _measurement: &V::Measurement) -> Result<ReportShare<V>, Error> {
+    fn shard(&mut self, i: usize, measurement: &V::Measurement) -> Result<ReportShare<V>, Error> {
         todo!()
     }
 
@@ -68,10 +73,6 @@ impl<V: Vdaf> Game<V> for Real<V> {
         todo!()
     }
 }
-
-/// Privacy simulator. Its job is to fool the adversary into believing it is playing the [`Real`]
-/// game when in fact it is playing the [`Ideal`] game.
-pub trait Simulator<V: Vdaf> {}
 
 /// Ideal privacy game.
 pub struct Ideal<V: Vdaf> {
@@ -106,6 +107,42 @@ impl<V: Vdaf> Game<V> for Ideal<V> {
 
     fn agg(&mut self, _agg_param: &V::AggParam) -> Result<Vec<V::Field>, Error> {
         todo!()
+    }
+}
+
+/// Privacy simulator. Its job is to fool the adversary into believing it is playing the [`Real`]
+/// game when in fact it is playing the [`Ideal`] game.
+pub trait Simulator<V: Vdaf> {}
+
+/// XXX
+pub trait Attacker<V: Vdaf> {
+    /// Construct an instance of the attacker with the given VDAF.
+    fn with(vdaf: V) -> Self;
+}
+
+#[cfg(test)]
+mod test_utils {
+    use crate::{vdaf::Vdaf, Distinguisher};
+
+    use super::*;
+
+    /// XXX
+    pub struct HonestButCurious<V>(V);
+
+    impl<V: Vdaf> Attacker<V> for HonestButCurious<V> {
+        fn with(vdaf: V) -> Self {
+            Self(vdaf)
+        }
+    }
+
+    impl<G, V> Distinguisher<G> for HonestButCurious<V>
+    where
+        G: Game<V>,
+        V: Vdaf,
+    {
+        fn play(&self, game: &mut G) -> Result<bool, Error> {
+            todo!()
+        }
     }
 }
 
@@ -173,23 +210,18 @@ mod test_insecure_vdaf {
         }
     }
 
-    struct InsecureVdafAttacker;
-
-    impl<G: Game<InsecureVdaf>> Distinguisher<G> for InsecureVdafAttacker {
-        fn play(&self, _game: &mut G) -> bool {
-            todo!()
-        }
-    }
-
     #[test]
     fn insecure_vdaf() {
         assert_eq!(
-            InsecureVdafAttacker.play(&mut Real::with(InsecureVdaf)),
+            test_utils::HonestButCurious::with(InsecureVdaf)
+                .play(&mut Real::with(InsecureVdaf))
+                .unwrap(),
             true
         );
-
         assert_eq!(
-            InsecureVdafAttacker.play(&mut Ideal::with(InsecureVdaf)),
+            test_utils::HonestButCurious::with(InsecureVdaf)
+                .play(&mut Ideal::with(InsecureVdaf))
+                .unwrap(),
             true
         );
     }

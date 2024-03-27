@@ -2,13 +2,10 @@
 
 use std::ops::AddAssign;
 
-use crate::{rand_bytes, vec_add};
+use crate::{rand_bytes, vec_add, Error};
 
 pub mod private;
 pub mod robust;
-
-/// VDAF execution error.
-pub struct Error();
 
 /// VDAF report share sent by each Client to an Aggregator.
 pub struct ReportShare<V: Vdaf> {
