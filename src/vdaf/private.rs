@@ -402,20 +402,18 @@ pub mod test_utils {
 
     use super::*;
 
-    /// A VDAF attacker that faithfully executes the protocol.
-    ///
-    /// Outputs `true` iff the [`Game`] computes the aggregate result correctly.
-    pub struct HonestButCurious<V> {
+    /// Test some basic correctness properties.
+    pub struct Tester<V> {
         vdaf: V,
     }
 
-    impl<V> HonestButCurious<V> {
+    impl<V> Tester<V> {
         pub fn with(vdaf: V) -> Self {
             Self { vdaf }
         }
     }
 
-    impl<G, V, F> Distinguisher<G> for HonestButCurious<V>
+    impl<G, V, F> Distinguisher<G> for Tester<V>
     where
         G: Game<V>,
         V: Vdaf<Measurement = u64, Field = F, AggParam = (), AggResult = u64>,

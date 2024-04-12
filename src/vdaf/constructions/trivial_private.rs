@@ -1,12 +1,12 @@
 //! Private, but not robust.
 
 use prio::{
-    codec::Decode,
     field::Field64,
-    vdaf::xof::{IntoFieldVec, Seed, Xof, XofTurboShake128},
+    vdaf::xof::{IntoFieldVec, Xof, XofTurboShake128},
 };
 
 use crate::{
+    prf::Func,
     vdaf::{AggregatorId, ReportShare, Vdaf},
     vec_add, Error,
 };
@@ -24,15 +24,18 @@ use crate::{
 #[derive(Clone)]
 pub struct TrivialPrivate;
 
-impl TrivialPrivate {
-    /// PRG used to derive derive a field element from random coin flips.
-    pub fn coins_to_field(coins: &[u8]) -> Result<Field64, Error> {
-        Ok(XofTurboShake128::seed_stream(
-            &Seed::get_decoded(coins).map_err(|_| "failed to read coins into XOF seed")?,
-            b"coins_to_r",
-            b"",
-        )
-        .into_field_vec(1)[0])
+/// A [PRF](crate::prf) instantiated from [`XofTurboShake128`].
+pub struct CoinsToField;
+
+impl Func for CoinsToField {
+    type Key = [u8; 16];
+    type Domain = [u8];
+    type Range = Field64;
+
+    fn eval(&self, k: &[u8; 16], x: &[u8]) -> Field64 {
+        let mut xof = XofTurboShake128::init(k, b"coins_to_field");
+        xof.update(x);
+        xof.into_seed_stream().into_field_vec(1)[0]
     }
 }
 
@@ -56,7 +59,10 @@ impl Vdaf for TrivialPrivate {
         _nonce: &[u8],
         coins: &[u8],
     ) -> Result<((), [Field64; 2]), Error> {
-        let r = Self::coins_to_field(coins)?;
+        let r = CoinsToField.eval(
+            coins.try_into().map_err(|_| "incorrect coins length")?,
+            b"TrivialPrivate",
+        );
         Ok(((), [Field64::from(*measurement) - r, r]))
     }
 
@@ -95,15 +101,12 @@ impl Vdaf for TrivialPrivate {
 
 pub mod theorem_private {
 
-    //! If [`TrivialPrivate::coins_to_field`] is a PRG, then [`TrivialPrivate`] is [`private`](crate::vdaf::private).
+    //! If [`CoinsToField`] is a [PRF](crate::prf), then [`TrivialPrivate`] is
+    //! [`private`](crate::vdaf::private).
     //!
-    //! Let `vdaf == TrivialPrivate` and `sim == TrivialPrivateSimulator::default()`. Then for
-    //! every VDAF attacker `a` there exists a PRG attacker `b` such that `a`'s advantage with
-    //! respect to `sim` is no greater than `b`'s advantage.
-
-    use std::collections::HashMap;
-
-    use prio::field::Field64;
+    //! Let `vdaf = TrivialPrivate` and `sim = TrivialPrivateSimulator::default()`. Then for every
+    //! VDAF attacker `a` there exists a [PRF](crate::prf) attacker `b` such that `a`'s advantage
+    //! with respect to `sim` is no greater than `b`'s advantage.
 
     use crate::{
         rand_bytes,
@@ -113,10 +116,12 @@ pub mod theorem_private {
             Vdaf,
         },
     };
+    use prio::field::{random_vector, Field64};
+    use std::collections::HashMap;
 
     use super::*;
 
-    /// [`Simulator`] for the proof.
+    /// [`Simulator`] for the theorem.
     #[derive(Default)]
     pub struct TrivialPrivateSimulator {
         input_shares: HashMap<ClientId, Field64>,
@@ -128,7 +133,10 @@ pub mod theorem_private {
             _hon_id: AggregatorId,
             cli_id: ClientId,
         ) -> Result<ReportShare<TrivialPrivate>, Error> {
-            let r = TrivialPrivate::coins_to_field(&rand_bytes(TrivialPrivate::RAND_SIZE))?;
+            // TODO(cjpatton) Update `FieldElement` so that we can just call `thread_rng().gen()`
+            // here. This will also be needed to instantiate the `RandFunc` game for
+            // `CoinsToField`.
+            let r = random_vector(1).map_err(|_| "random_vector() failed")?[0];
             self.input_shares.insert(cli_id, r);
 
             Ok(ReportShare {
@@ -165,7 +173,7 @@ pub mod theorem_private {
         ) -> Result<Vec<Field64>, Error> {
             let mut agg_share = Field64::from(0);
             for cli_id in cli_ids {
-                if let Some(input_share) = self.input_shares.get(&cli_id) {
+                if let Some(input_share) = self.input_shares.get(cli_id) {
                     agg_share += *input_share;
                 }
             }
@@ -184,14 +192,14 @@ pub mod theorem_private {
 
         #[test]
         fn real() {
-            let adv = test_utils::HonestButCurious::with(TrivialPrivate);
+            let adv = test_utils::Tester::with(TrivialPrivate);
             let vdaf = TrivialPrivate;
             assert_eq!(adv.play(Real::with(vdaf)), Ok(true));
         }
 
         #[test]
         fn ideal() {
-            let adv = test_utils::HonestButCurious::with(TrivialPrivate);
+            let adv = test_utils::Tester::with(TrivialPrivate);
             let sim = TrivialPrivateSimulator::default();
             assert_eq!(adv.play(Ideal::with(sim)), Ok(true));
         }

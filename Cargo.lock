@@ -17,6 +17,7 @@ dependencies = [
 name = "better_proofs"
 version = "0.1.0"
 dependencies = [
+ "aes",
  "prio",
  "rand",
 ]

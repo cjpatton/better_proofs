@@ -1,5 +1,6 @@
-//! 1-round, 2-party VDAFs
-//! [[draft-irtf-cfrg-vdaf]](https://datatracker.ietf.org/doc/draft-irtf-cfrg-vdaf/).
+//! 1-round, 2-party VDAFs [[draft-irtf-cfrg-vdaf]].
+//!
+//! [draft-irtf-cfrg-vdaf]: https://datatracker.ietf.org/doc/draft-irtf-cfrg-vdaf/
 
 use std::{hash::Hash, ops::AddAssign};
 
