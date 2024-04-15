@@ -1,5 +1,3 @@
-//! "Better" as in "maintainable".
-
 use std::ops::AddAssign;
 
 use rand::prelude::*;
