@@ -1,8 +1,8 @@
 # Better proofs
 
-[Game-playing proofs](https://eprint.iacr.org/2004/331) written in Rust. A
-"game" is a security definition for a cryptographic protocol (or primitive)
-that is used to define an adversary's advantage in breaking the protocol.
+Game-playing proofs [BR06] written in Rust. A "game" is a security definition
+for a cryptographic protocol (or primitive) that is used to define an
+adversary's advantage in breaking the protocol.
 
 Games are usually specified in "pseudocode". There is no standard syntax for
 this pseudocode (each proof author has their own style), and its semantics is
@@ -28,7 +28,21 @@ the proof author's responsibility to compute bounds and specify reductions.
 
 Disclaimer: I am a "pen-and-paper" person and don't have a formal methods
 background. I'm aware that there are a number of tools out there (e.g.,
-[CryptoVerif](https://bblanche.gitlabpages.inria.fr/CryptoVerif/) for
+[CryptoVerif](https://bblanche.gitlabpages.inria.fr/CryptoVerif/)) for
 establishing computational security proofs for cryptographic protocols. My
 understanding is that using these tools, especially when they need to be
-adapted to a new domain, requires a significant amount of expertise.
+adapted to a new domain, requires a significant amount of expertise. The goal
+of this project is not to replace these tools, but to limit the scope of what
+they have to do.
+
+The crate has two modules, each containing a toy example to get us started:
+
+- `prf` defines secure PRFs and gives a proof sketch of the PRP/PRF switching
+  lemma [BR06] consisting of a sequence of game transitions.
+
+- `vdaf` defines security properties of VDAFs [draft-irtf-cfrg-vdaf]. It also
+  gives a construction with a simple privacy proof, but is trivially
+  non-robust.
+
+[BR06]: https://eprint.iacr.org/2004/331
+[draft-irtf-cfrg-vdaf]: https://datatracker.ietf.org/doc/draft-irtf-cfrg-vdaf

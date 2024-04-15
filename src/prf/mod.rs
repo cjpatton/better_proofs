@@ -212,7 +212,7 @@ pub mod lemma_prp_to_prf {
     //! Formally, for every PRF attacker `a`, there exists a PRP attacker `b` such that
     //!
     //! ```text
-    //! AdvPRF(a, f) <= AdvPRP(b, f) + q(q-1)/(2*|f::Range|)
+    //! AdvPRF(a, f) <= AdvPRP(b, f) + q(q-1)/(2*|F::Range|)
     //! ```
     //!
     //! where `a` queries its oracle at most `q` times and `b` has the same runtime as `a`.
@@ -234,7 +234,9 @@ pub mod lemma_prp_to_prf {
     /// p1 = Pr[a.play(G1::default()) = Ok(true)]
     /// ```
     ///
-    /// Then `p0 - p1` is exactly `a`'s [PRP](crate::prf) distinguishing advantage against `f`.
+    /// REDUCTION `b`: Run `a`.
+    ///
+    /// Then `p0 - p1` is exactly `b`'s [PRP](crate::prf) distinguishing advantage against `f`.
     pub type G1<F> = RandPerm<F>;
 
     /// Game `G2`: derived from `G1` by rewriting the rejection sampling loop.
@@ -291,8 +293,8 @@ pub mod lemma_prp_to_prf {
     /// ```
     ///
     /// `G3` and `G2` are IDENTICAL UNTIL the game samples a point in the range of `f` twice.
-    /// Afeter `q` queries, this probability is `q(q-1)/(2*|f::Range|)`, thus `p2 - p3 <=
-    /// q(q-1)/(2*|f::Range|)`.
+    /// Afeter `q` queries, this probability is `q(q-1)/(2*|F::Range|)`, thus `p2 - p3 <=
+    /// q(q-1)/(2*|F::Range|)`.
     ///
     ///
     /// `G3` is EQUIVALENT to the [`RandFunc`] game with `f`.
