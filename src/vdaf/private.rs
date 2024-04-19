@@ -149,7 +149,7 @@ pub trait Handler<V: Vdaf, S, W, R> {
 
     fn handle_agg(
         &mut self,
-        items: Vec<(usize, S, R)>,
+        items: Vec<(ClientId, S, R)>,
         agg_param: &V::AggParam,
     ) -> Result<Vec<V::Field>, Error>;
 }
@@ -191,7 +191,7 @@ where
 
     fn handle_agg(
         &mut self,
-        items: Vec<(usize, ReportShare<V>, Vec<V::Field>)>,
+        items: Vec<(ClientId, ReportShare<V>, Vec<V::Field>)>,
         _agg_param: &V::AggParam,
     ) -> Result<Vec<V::Field>, Error> {
         items
@@ -239,12 +239,12 @@ impl<V: Vdaf, S: Simulator<V>> Handler<V, V::Measurement, (), ()> for S {
 
     fn handle_agg(
         &mut self,
-        items: Vec<(usize, V::Measurement, ())>,
+        items: Vec<(ClientId, V::Measurement, ())>,
         agg_param: &<V as Vdaf>::AggParam,
     ) -> Result<Vec<<V as Vdaf>::Field>, Error> {
         // Give the simulator the aggregate result and command it to simulate the honest
         // aggregator's aggregate share.
-        let (cli_ids, measurements): (Vec<usize>, Vec<V::Measurement>) = items
+        let (cli_ids, measurements): (Vec<ClientId>, Vec<V::Measurement>) = items
             .into_iter()
             .map(|(cli_id, measurement, _r)| (cli_id, measurement))
             .unzip();
@@ -261,6 +261,10 @@ enum AggState<W, R> {
     Aggregated,
 }
 
+type AggStatePerParam<A, W, R> = HashMap<A, AggState<W, R>>;
+
+type EvalPerClient<S, A, W, R> = (S, AggStatePerParam<A, W, R>);
+
 /// Execution environment used to instantiate [`Game`].
 #[derive(Default)]
 pub struct Env<V, H, S, W, R>
@@ -270,8 +274,7 @@ where
 {
     handler: H,
     init: Option<(V::VerifyKey, AggregatorId)>,
-    #[allow(clippy::type_complexity)]
-    eval: HashMap<usize, (S, HashMap<V::AggParam, AggState<W, R>>)>,
+    eval: HashMap<ClientId, EvalPerClient<S, V::AggParam, W, R>>,
 }
 
 impl<V, H, S, W, R> Game<V> for Env<V, H, S, W, R>
