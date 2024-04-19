@@ -20,7 +20,8 @@ use crate::{
 ///
 /// Each measurement `m` is encoded as an element of [`Field64`] and split into `m - r` and `r`,
 /// where `r` is a pseudoandom element of [`Field64`]. No information is exchanged during
-/// preparation, thus no measurement validation is performed.
+/// preparation, thus no measurement validation is performed and this scheme is trivially not
+/// robust.
 #[derive(Clone)]
 pub struct TrivialPrivate;
 

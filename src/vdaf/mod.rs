@@ -13,6 +13,7 @@ use crate::Error;
 
 pub mod constructions;
 pub mod private;
+pub mod robust;
 
 /// Aggregator ID.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -60,7 +61,7 @@ pub trait Vdaf: Clone {
     type PublicShare: Clone;
 
     /// The input share sent to each aggregator in its report share.
-    type InputShare;
+    type InputShare: Clone;
 
     /// The state of an aggregator during preparation.
     type PrepState;
