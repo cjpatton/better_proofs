@@ -40,9 +40,9 @@ impl Func for CoinsToField {
 }
 
 impl Vdaf for TrivialPrivate {
-    const VERIFY_KEY_SIZE: usize = 0;
-    const NONCE_SIZE: usize = 0;
-    const RAND_SIZE: usize = 16;
+    type VerifyKey = ();
+    type Nonce = ();
+    type Coins = [u8; 16];
 
     type Measurement = u64;
     type Field = Field64;
@@ -56,19 +56,16 @@ impl Vdaf for TrivialPrivate {
     fn shard(
         &self,
         measurement: &u64,
-        _nonce: &[u8],
-        coins: &[u8],
+        _nonce: &(),
+        coins: &[u8; 16],
     ) -> Result<((), [Field64; 2]), Error> {
-        let r = CoinsToField.eval(
-            coins.try_into().map_err(|_| "incorrect coins length")?,
-            b"TrivialPrivate",
-        );
+        let r = CoinsToField.eval(coins, b"TrivialPrivate");
         Ok(((), [Field64::from(*measurement) - r, r]))
     }
 
     fn prep_init(
         &self,
-        _vk: &[u8],
+        _vk: &(),
         _agg_id: AggregatorId,
         _agg_param: &(),
         report_share: &ReportShare<Self>,
@@ -99,6 +96,18 @@ impl Vdaf for TrivialPrivate {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use crate::vdaf::run_vdaf;
+
+    use super::*;
+
+    #[test]
+    fn run() {
+        assert_eq!(6, run_vdaf(&TrivialPrivate, &[1, 2, 3], &()).unwrap());
+    }
+}
+
 pub mod theorem_private {
 
     //! If [`CoinsToField`] is a [PRF](crate::prf), then [`TrivialPrivate`] is
@@ -108,13 +117,9 @@ pub mod theorem_private {
     //! VDAF attacker `a` there exists a [PRF](crate::prf) attacker `b` such that `a`'s advantage
     //! with respect to `sim` is no greater than `b`'s advantage.
 
-    use crate::{
-        rand_bytes,
-        vdaf::{
-            constructions::trivial_private::TrivialPrivate,
-            private::{ClientId, Simulator},
-            Vdaf,
-        },
+    use crate::vdaf::{
+        constructions::trivial_private::TrivialPrivate,
+        private::{ClientId, Simulator},
     };
     use prio::field::{random_vector, Field64};
     use std::collections::HashMap;
@@ -140,7 +145,7 @@ pub mod theorem_private {
             self.input_shares.insert(cli_id, r);
 
             Ok(ReportShare {
-                nonce: rand_bytes(TrivialPrivate::NONCE_SIZE),
+                nonce: (),
                 public_share: (),
                 input_share: r,
             })
@@ -148,7 +153,7 @@ pub mod theorem_private {
 
         fn sim_prep_init(
             &mut self,
-            _adv_vk: &[u8],
+            _adv_vk: &(),
             _hon_id: AggregatorId,
             _cli_id: ClientId,
             _agg_param: &(),

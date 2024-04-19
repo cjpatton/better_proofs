@@ -41,9 +41,11 @@
 
 use std::collections::HashMap;
 
+use rand::distributions::{Distribution, Standard};
+
 use crate::vec_add;
 
-use super::{send, AggregatorId, Error, ReportShare, Vdaf};
+use super::{send, shard_into_report_shares, AggregatorId, Error, ReportShare, Vdaf};
 
 /// Client ID.
 pub type ClientId = usize;
@@ -53,7 +55,7 @@ pub type ClientId = usize;
 /// Interface for an attacker playing the [`Real`] or [`Ideal`] game.
 pub trait Game<V: Vdaf> {
     /// Initialize the game with the verification key and corrupt aggregator.
-    fn init(&mut self, adv_vk: &[u8], adv_id: AggregatorId) -> Result<(), Error>;
+    fn init(&mut self, adv_vk: &V::VerifyKey, adv_id: AggregatorId) -> Result<(), Error>;
 
     /// Command a client to generate a report for the given measurement, send the honest aggregator
     /// its report share, and return the corrupt aggregator's report share.
@@ -95,7 +97,7 @@ pub trait Simulator<V: Vdaf> {
 
     fn sim_prep_init(
         &mut self,
-        adv_vk: &[u8],
+        adv_vk: &V::VerifyKey,
         hon_id: AggregatorId,
         cli_id: ClientId,
         agg_param: &V::AggParam,
@@ -131,7 +133,7 @@ pub trait Handler<V: Vdaf, S, W, R> {
     fn handle_prep_init(
         &mut self,
         s: &S,
-        adv_vk: &[u8],
+        adv_vk: &V::VerifyKey,
         hon_id: AggregatorId,
         cli_id: ClientId,
         agg_param: &V::AggParam,
@@ -152,21 +154,24 @@ pub trait Handler<V: Vdaf, S, W, R> {
     ) -> Result<Vec<V::Field>, Error>;
 }
 
-impl<V: Vdaf> Handler<V, ReportShare<V>, V::PrepState, Vec<V::Field>> for V {
+impl<V: Vdaf> Handler<V, ReportShare<V>, V::PrepState, Vec<V::Field>> for V
+where
+    Standard: Distribution<V::Nonce> + Distribution<V::Coins>,
+{
     fn handle_shard(
         &mut self,
         hon_id: AggregatorId,
         _cli_id: ClientId,
         measurement: &V::Measurement,
     ) -> Result<(ReportShare<V>, ReportShare<V>), Error> {
-        let report_shares = self.shard_into_report_shares(measurement)?;
+        let report_shares = shard_into_report_shares(self, measurement)?;
         Ok(send(report_shares, hon_id))
     }
 
     fn handle_prep_init(
         &mut self,
         report_share: &ReportShare<V>,
-        adv_vk: &[u8],
+        adv_vk: &V::VerifyKey,
         hon_id: AggregatorId,
         _cli_id: ClientId,
         agg_param: &V::AggParam,
@@ -212,7 +217,7 @@ impl<V: Vdaf, S: Simulator<V>> Handler<V, V::Measurement, (), ()> for S {
     fn handle_prep_init(
         &mut self,
         _s: &V::Measurement,
-        adv_vk: &[u8],
+        adv_vk: &V::VerifyKey,
         hon_id: AggregatorId,
         cli_id: ClientId,
         agg_param: &V::AggParam,
@@ -264,7 +269,7 @@ where
     H: Handler<V, S, W, R>,
 {
     handler: H,
-    init: Option<(Vec<u8>, AggregatorId)>,
+    init: Option<(V::VerifyKey, AggregatorId)>,
     #[allow(clippy::type_complexity)]
     eval: HashMap<usize, (S, HashMap<V::AggParam, AggState<W, R>>)>,
 }
@@ -275,12 +280,12 @@ where
     H: Handler<V, S, W, R>,
     S: Clone,
 {
-    fn init(&mut self, adv_vk: &[u8], adv_id: AggregatorId) -> Result<(), Error> {
+    fn init(&mut self, adv_vk: &V::VerifyKey, adv_id: AggregatorId) -> Result<(), Error> {
         if self.init.is_some() {
             return Err("already initialized");
         }
 
-        self.init = Some((adv_vk.to_owned(), adv_id.peer()));
+        self.init = Some((adv_vk.clone(), adv_id.peer()));
         Ok(())
     }
 
@@ -369,7 +374,10 @@ where
 /// Real privacy game.
 pub type Real<V> = Env<V, V, ReportShare<V>, <V as Vdaf>::PrepState, Vec<<V as Vdaf>::Field>>;
 
-impl<V: Vdaf> Real<V> {
+impl<V: Vdaf> Real<V>
+where
+    Standard: Distribution<V::Nonce> + Distribution<V::Coins>,
+{
     /// Construct an instance of the [`Real`] game with the given VDAF.
     pub fn with(vdaf: V) -> Self {
         Self {
@@ -397,8 +405,9 @@ impl<V: Vdaf, S: Simulator<V>> Ideal<V, S> {
 #[cfg(test)]
 pub mod test_utils {
     use prio::field::FieldElementWithInteger;
+    use rand::prelude::*;
 
-    use crate::{rand_bytes, vdaf::Vdaf, vec_add, Distinguisher};
+    use crate::{vdaf::Vdaf, vec_add, Distinguisher};
 
     use super::*;
 
@@ -418,11 +427,12 @@ pub mod test_utils {
         G: Game<V>,
         V: Vdaf<Measurement = u64, Field = F, AggParam = (), AggResult = u64>,
         F: FieldElementWithInteger<Integer = u64>,
+        Standard: Distribution<V::VerifyKey>,
     {
         fn play(&self, mut game: G) -> Result<bool, Error> {
             let batch_size = 10;
             let test_measurement = 1;
-            let vk = rand_bytes(V::VERIFY_KEY_SIZE);
+            let vk = thread_rng().gen();
 
             // Corrupt the leader.
             game.init(&vk, AggregatorId::Leader)?;

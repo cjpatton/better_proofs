@@ -1,18 +1,9 @@
 use std::ops::AddAssign;
 
-use rand::prelude::*;
-
 pub mod prf;
 pub mod vdaf;
 
 pub type Error = &'static str;
-
-/// Generate a vector with `size` random bytes.
-pub fn rand_bytes(size: usize) -> Vec<u8> {
-    let mut bytes = vec![0; size];
-    thread_rng().fill(&mut bytes[..]);
-    bytes
-}
 
 /// Add two vectors together.
 pub fn vec_add<F: AddAssign>(mut u: Vec<F>, v: Vec<F>) -> Vec<F> {
