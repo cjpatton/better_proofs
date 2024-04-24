@@ -4,36 +4,53 @@ Game-playing proofs [BR06] written in Rust. A "game" is a security definition
 for a cryptographic protocol (or primitive) that is used to define an
 adversary's advantage in breaking the protocol.
 
+## Why
+
 Games are usually specified in "pseudocode". There is no standard syntax for
 this pseudocode (each proof author has their own style), and its semantics is
 usually only implicitly defined. By replacing this pseudocode with a proper
-programming language, we hope to make it easier to interpret these definitions
-and verify proofs for them.
+programming language, we can make it easier to interpret these definitions
+and verify proofs for them with the help of a computer.
 
-We choose Rust because so that we can use with [hax](https://cryspen.com/hax/).
-hax is a tool for translating code into languages with formal semantics such
-that the code can be analyzed for functional correctness and various (symbolic)
-security properties. In this way, hax can act as a bridge between experts in
-formal methods and those designing and implementing protocols.
+There are already a number of tools for establishing game-playing proofs, such
+as [CryptoVerif](https://bblanche.gitlabpages.inria.fr/CryptoVerif/) or
+[SSProve](https://eprint.iacr.org/2021/397)). With these tools, one normally
+carries out the proof work in a language specific to the tool, which requires a
+high degree of expertise.
 
-Concretely, we would like to use hax as follows. The definition, protocol, and
-proof are all implemented in Rust by the proof author. Game-playing proofs
-consist of a sequence of games, each derived from the previous game by
-rewriting it or changing its functionality. For each such "transition", the
-proof author argues that the neighboring games are (1) equivalent, (2)
-identical until something rare happens, or (3) distinguishing between the games
-reduces to breaking an assumption. The hope is that checking each of these
-transitions amounts to an equivalence proof (modulo a branch of code); it is
-the proof author's responsibility to compute bounds and specify reductions.
+[hax](https://cryspen.com/hax/) is a tool for translating Rust into languages
+with formal semantics such that the code can be analyzed for functional
+correctness and various (symbolic) security properties. In this way, hax can
+act as a bridge between experts in formal methods and those designing and
+implementing protocols.
 
-Disclaimer: I am a "pen-and-paper" person and don't have a formal methods
-background. I'm aware that there are a number of tools out there (e.g.,
-[CryptoVerif](https://bblanche.gitlabpages.inria.fr/CryptoVerif/)) for
-establishing computational security proofs for cryptographic protocols. My
-understanding is that using these tools, especially when they need to be
-adapted to a new domain, requires a significant amount of expertise. The goal
-of this project is not to replace these tools, but to limit the scope of what
-they have to do.
+We envision the following separation of concerns. The definition, protocol, and
+proof are all implemented in Rust. The proof consists of a sequence of games,
+each derived from the previous game by rewriting it or changing its
+functionality. For each such "transition", we need to (1) argue that the games
+are equivalent, (2) argue that the games are equivalent until something rare
+happens ("identical until bad"), or (3) construct a reduction of a
+distinguisher to an algorithm that breaks one of our assumptions. The hope is
+that the task of formally verifying each of these transitions can be formulated
+as checking equivalence of two Rust programs (i.e., neighboring games), thereby
+reducing the amount of work we need the formal methods tools to do.
+
+There are a few reasons why doing most of the proof work in Rust, rather than
+in the language native to the tool, may not work:
+
+1. The formal methods expert may need domain expertise in order to verify game
+   hops. Put another way, it may be more efficient for the domain expert to
+   just learn the damn tools!
+
+2. The concrete cost (in terms of CPU time and memory) of finding a proof might
+   be higher than if the games were expressed in native code.
+
+3. It may be harder to find a proof for translated code compared to native
+   code.
+
+This repo can be thought of an experiment to assess these costs.
+
+## What
 
 The crate has two modules, each containing a toy example to get us started:
 
