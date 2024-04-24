@@ -58,8 +58,9 @@ The crate has two modules, each containing a toy example to get us started:
   lemma [BR06] consisting of a sequence of game transitions.
 
 - `vdaf` defines security properties of VDAFs [draft-irtf-cfrg-vdaf]. It also
-  gives a construction with a simple privacy proof, but is trivially
-  non-robust.
+  gives two constructions, one of which is trivially private, but not robust,
+  and another that is trivially robust, but not private. The proofs *should* be
+  simple :)
 
 [BR06]: https://eprint.iacr.org/2004/331
 [draft-irtf-cfrg-vdaf]: https://datatracker.ietf.org/doc/draft-irtf-cfrg-vdaf
