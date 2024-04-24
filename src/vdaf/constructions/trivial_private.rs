@@ -53,14 +53,9 @@ impl Vdaf for TrivialPrivate {
     type AggParam = ();
     type AggResult = u64;
 
-    fn shard(
-        &self,
-        measurement: &u64,
-        _nonce: &(),
-        coins: &[u8; 16],
-    ) -> Result<((), [Field64; 2]), Error> {
+    fn shard(&self, measurement: &u64, _nonce: &(), coins: &[u8; 16]) -> ((), [Field64; 2]) {
         let r = CoinsToField.eval(coins, b"TrivialPrivate");
-        Ok(((), [Field64::from(*measurement) - r, r]))
+        ((), [Field64::from(*measurement) - r, r])
     }
 
     fn prep_init(
@@ -69,8 +64,8 @@ impl Vdaf for TrivialPrivate {
         _agg_id: AggregatorId,
         _agg_param: &(),
         report_share: &ReportShare<Self>,
-    ) -> Result<(Field64, ()), Error> {
-        Ok((report_share.input_share, ()))
+    ) -> (Field64, ()) {
+        (report_share.input_share, ())
     }
 
     fn prep_finish(
@@ -86,9 +81,9 @@ impl Vdaf for TrivialPrivate {
         _agg_param: &(),
         agg_shares: [Vec<Field64>; 2],
         _num_measurements: usize,
-    ) -> Result<u64, Error> {
+    ) -> u64 {
         let [agg_share_0, agg_share_1] = agg_shares;
-        Ok(vec_add(agg_share_0, agg_share_1)[0].into())
+        vec_add(agg_share_0, agg_share_1)[0].into()
     }
 
     fn agg_func(_agg_param: &(), measurements: &[u64]) -> u64 {

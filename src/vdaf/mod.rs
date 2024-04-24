@@ -80,7 +80,7 @@ pub trait Vdaf: Clone {
         measurement: &Self::Measurement,
         nonce: &Self::Nonce,
         coins: &Self::Coins,
-    ) -> Result<(Self::PublicShare, [Self::InputShare; 2]), Error>;
+    ) -> (Self::PublicShare, [Self::InputShare; 2]);
 
     /// Aggregator begins preparation of a report.
     fn prep_init(
@@ -89,7 +89,7 @@ pub trait Vdaf: Clone {
         agg_id: AggregatorId,
         agg_param: &Self::AggParam,
         report_share: &ReportShare<Self>,
-    ) -> Result<(Self::PrepState, Self::PrepShare), Error>;
+    ) -> (Self::PrepState, Self::PrepShare);
 
     /// Aggregator finishes preparation of a report and obtains its output share.
     fn prep_finish(
@@ -100,30 +100,31 @@ pub trait Vdaf: Clone {
 
     /// Collector combines the aggregate shares (sums of the output share) into the aggregate
     /// result.
+    ///
+    /// # Preconditions
+    ///
+    /// - The length of the aggregate shares must be the same.
     fn unshard(
         &self,
         agg_param: &Self::AggParam,
         agg_shares: [Vec<Self::Field>; 2],
         num_measurements: usize,
-    ) -> Result<Self::AggResult, Error>;
+    ) -> Self::AggResult;
 
     /// The aggregation function computed by this VDAF.
     fn agg_func(agg_param: &Self::AggParam, measurements: &[Self::Measurement]) -> Self::AggResult;
 }
 
 /// Flip coins and split the measurement into report shares.
-fn shard_into_report_shares<V: Vdaf>(
-    vdaf: &V,
-    measurement: &V::Measurement,
-) -> Result<[ReportShare<V>; 2], Error>
+fn shard_into_report_shares<V: Vdaf>(vdaf: &V, measurement: &V::Measurement) -> [ReportShare<V>; 2]
 where
     Standard: Distribution<V::Nonce> + Distribution<V::Coins>,
 {
     let mut rng = thread_rng();
     let nonce = rng.gen();
     let coins = rng.gen();
-    let (public_share, [input_share_0, input_share_1]) = vdaf.shard(measurement, &nonce, &coins)?;
-    Ok([
+    let (public_share, [input_share_0, input_share_1]) = vdaf.shard(measurement, &nonce, &coins);
+    [
         ReportShare {
             public_share: public_share.clone(),
             input_share: input_share_0,
@@ -134,7 +135,7 @@ where
             input_share: input_share_1,
             nonce,
         },
-    ])
+    ]
 }
 
 /// Execute the VDAF on the measurements and return the aggregate result.
@@ -154,11 +155,11 @@ where
     let agg_shares = measurements
         .iter()
         .map(|measurement| {
-            let [report_share_0, report_share_1] = shard_into_report_shares(vdaf, measurement)?;
+            let [report_share_0, report_share_1] = shard_into_report_shares(vdaf, measurement);
             let (prep_state_0, prep_share_0) =
-                vdaf.prep_init(&vk, AggregatorId::Leader, agg_param, &report_share_0)?;
+                vdaf.prep_init(&vk, AggregatorId::Leader, agg_param, &report_share_0);
             let (prep_state_1, prep_share_1) =
-                vdaf.prep_init(&vk, AggregatorId::Helper, agg_param, &report_share_1)?;
+                vdaf.prep_init(&vk, AggregatorId::Helper, agg_param, &report_share_1);
             let prep_shares = [prep_share_0, prep_share_1];
             let out_share_0 = vdaf.prep_finish(prep_state_0, &prep_shares)?;
             let out_share_1 = vdaf.prep_finish(prep_state_1, &prep_shares)?;
@@ -174,7 +175,7 @@ where
             ])
         })
         .unwrap()?;
-    let agg_result = vdaf.unshard(agg_param, agg_shares, measurements.len())?;
+    let agg_result = vdaf.unshard(agg_param, agg_shares, measurements.len());
     debug_assert_eq!(agg_result, V::agg_func(agg_param, measurements));
     Ok(agg_result)
 }

@@ -164,7 +164,7 @@ where
         _cli_id: ClientId,
         measurement: &V::Measurement,
     ) -> Result<(ReportShare<V>, ReportShare<V>), Error> {
-        let report_shares = shard_into_report_shares(self, measurement)?;
+        let report_shares = shard_into_report_shares(self, measurement);
         Ok(send(report_shares, hon_id))
     }
 
@@ -176,7 +176,7 @@ where
         _cli_id: ClientId,
         agg_param: &V::AggParam,
     ) -> Result<(V::PrepState, V::PrepShare), Error> {
-        self.prep_init(adv_vk, hon_id, agg_param, report_share)
+        Ok(self.prep_init(adv_vk, hon_id, agg_param, report_share))
     }
 
     fn handle_prep_finish(
@@ -449,7 +449,7 @@ pub mod test_utils {
                 // Preparation
                 let (prep_state, prep_share_0) =
                     self.vdaf
-                        .prep_init(&vk, AggregatorId::Leader, &(), &report_share_0)?;
+                        .prep_init(&vk, AggregatorId::Leader, &(), &report_share_0);
                 let prep_share_1 = game.prep_init(i, &())?;
                 let prep_shares = [prep_share_0, prep_share_1];
                 game.prep_finish(i, &(), &prep_shares)?;
@@ -462,9 +462,15 @@ pub mod test_utils {
                 .reduce(|agg, out| vec_add(agg, out))
                 .unwrap();
             let agg_share_1 = game.agg(&())?;
+            if agg_share_1.len() != agg_share_0.len() {
+                // In the real world, the aggregate share will have the correct length. If it
+                // doesn't, then guess we're in the ideal world.
+                return Ok(false);
+            }
+
             let agg_result = self
                 .vdaf
-                .unshard(&(), [agg_share_0, agg_share_1], batch_size)?;
+                .unshard(&(), [agg_share_0, agg_share_1], batch_size);
 
             if agg_result != test_measurement * batch_size as u64 {
                 // In the real world, the honest aggregator will compute a share of 0. If it does
