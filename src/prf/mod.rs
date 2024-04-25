@@ -254,7 +254,6 @@ pub mod lemma_prp_to_prf {
         F::Domain: Sized,
     {
         table: HashMap<F::Domain, F::Range>,
-        #[cfg(feature = "identical-until")]
         range: HashSet<F::Range>,
     }
 
@@ -275,9 +274,9 @@ pub mod lemma_prp_to_prf {
                     // conditionally compile the code covered by the attribute.
                     #[cfg(feature = "identical-until")]
                     if self.range.contains(&y) {
-                        self.range.insert(y.clone());
                         continue;
                     }
+                    self.range.insert(y.clone());
                     break y;
                 })
                 .clone()
