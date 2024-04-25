@@ -143,11 +143,11 @@ impl<V: Vdaf> Game<V> for Real<V> {
             (Ok(out_share_0), Ok(out_share_1)) => Some(vec_add(out_share_0, out_share_1)),
 
             // Preparation failed: return nothing.
-            (Err(_), Err(_)) => None,
+            (Err(e0), Err(e1)) if e0 == e1 => None,
 
             // The aggregators disagree on the outcome. We consider this a break of robustness, so
             // leak this result to the attacker.
-            (Err(e), Ok(_)) | (Ok(_), Err(e)) => return Err(e),
+            _ => return Err("aggregators disagree about report validity"),
         };
 
         Ok(Transcript { prep_shares, out })
