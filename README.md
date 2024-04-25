@@ -1,6 +1,6 @@
 # Better proofs
 
-Game-playing proofs [BR06] written in Rust. A "game" is a security definition
+Game-playing proofs [[BR06]] written in Rust. A "game" is a security definition
 for a cryptographic protocol (or primitive) that is used to define an
 adversary's advantage in breaking the protocol.
 
@@ -55,7 +55,7 @@ This repo can be thought of an experiment to assess these costs.
 The crate has two modules, each containing a toy example to get us started:
 
 - `prf` defines secure PRFs and gives a proof sketch of the PRP/PRF switching
-  lemma [BR06] consisting of a sequence of game transitions.
+  lemma [[BR06]] consisting of a sequence of game transitions.
 
 - `vdaf` defines security properties of VDAFs [draft-irtf-cfrg-vdaf]. It also
   gives two constructions, one of which is trivially private, but not robust,
