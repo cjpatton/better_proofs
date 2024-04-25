@@ -182,7 +182,7 @@ where
 }
 
 /// Send one share to the honest aggregator and another to the malicious aggregator.
-fn send<Z>(shares: [Z; 2], hon_id: AggregatorId) -> (Z, Z) {
+fn send_to_adv<Z>(shares: [Z; 2], hon_id: AggregatorId) -> (Z, Z) {
     let [share_0, share_1] = shares;
     if hon_id == AggregatorId::Helper {
         (share_0, share_1)

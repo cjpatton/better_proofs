@@ -45,7 +45,7 @@ use rand::distributions::{Distribution, Standard};
 
 use crate::vec_add;
 
-use super::{send, shard_into_report_shares, AggregatorId, Error, ReportShare, Vdaf};
+use super::{send_to_adv, shard_into_report_shares, AggregatorId, Error, ReportShare, Vdaf};
 
 /// Client ID.
 pub type ClientId = usize;
@@ -87,39 +87,6 @@ pub trait Game<V: Vdaf> {
     fn agg(&mut self, agg_param: &V::AggParam) -> Result<Vec<V::Field>, Error>;
 }
 
-/// Simlulates the honest aggregator in the [`Ideal`] game given only the aggregate results.
-pub trait Simulator<V: Vdaf> {
-    fn sim_shard(
-        &mut self,
-        hon_id: AggregatorId,
-        cli_id: ClientId,
-    ) -> Result<ReportShare<V>, Error>;
-
-    fn sim_prep_init(
-        &mut self,
-        adv_vk: &V::VerifyKey,
-        hon_id: AggregatorId,
-        cli_id: ClientId,
-        agg_param: &V::AggParam,
-    ) -> Result<V::PrepShare, Error>;
-
-    fn sim_prep_finish(
-        &mut self,
-        cli_id: ClientId,
-        agg_param: &V::AggParam,
-        prep_shares: &[V::PrepShare; 2],
-    ) -> Result<(), Error>;
-
-    fn sim_agg(
-        &mut self,
-        cli_ids: &[ClientId],
-        agg_param: &V::AggParam,
-        agg_result: &V::AggResult,
-    ) -> Result<Vec<V::Field>, Error>;
-}
-
-// Middleware
-
 /// Middleware between [`Vdaf`] and [`Env`] in the [`Real`] game. (Likewise for [`Simulator`] in
 /// the [`Ideal`] game.)
 pub trait Handler<V: Vdaf, S, W, R> {
@@ -154,6 +121,39 @@ pub trait Handler<V: Vdaf, S, W, R> {
     ) -> Result<Vec<V::Field>, Error>;
 }
 
+/// Simlulates the honest aggregator in the [`Ideal`] game given only the aggregate results.
+pub trait Simulator<V: Vdaf> {
+    fn sim_shard(
+        &mut self,
+        hon_id: AggregatorId,
+        cli_id: ClientId,
+    ) -> Result<ReportShare<V>, Error>;
+
+    fn sim_prep_init(
+        &mut self,
+        adv_vk: &V::VerifyKey,
+        hon_id: AggregatorId,
+        cli_id: ClientId,
+        agg_param: &V::AggParam,
+    ) -> Result<V::PrepShare, Error>;
+
+    fn sim_prep_finish(
+        &mut self,
+        cli_id: ClientId,
+        agg_param: &V::AggParam,
+        prep_shares: &[V::PrepShare; 2],
+    ) -> Result<(), Error>;
+
+    fn sim_agg(
+        &mut self,
+        cli_ids: &[ClientId],
+        agg_param: &V::AggParam,
+        agg_result: &V::AggResult,
+    ) -> Result<Vec<V::Field>, Error>;
+}
+
+// Middleware between [`Real`] and [`Vdaf`].
+
 impl<V: Vdaf> Handler<V, ReportShare<V>, V::PrepState, Vec<V::Field>> for V
 where
     Standard: Distribution<V::Nonce> + Distribution<V::Coins>,
@@ -165,7 +165,7 @@ where
         measurement: &V::Measurement,
     ) -> Result<(ReportShare<V>, ReportShare<V>), Error> {
         let report_shares = shard_into_report_shares(self, measurement);
-        Ok(send(report_shares, hon_id))
+        Ok(send_to_adv(report_shares, hon_id))
     }
 
     fn handle_prep_init(
@@ -201,6 +201,8 @@ where
             .ok_or("empty aggregate share")
     }
 }
+
+// Middleware between [`Ideal`] and [`Simulator`].
 
 impl<V: Vdaf, S: Simulator<V>> Handler<V, V::Measurement, (), ()> for S {
     fn handle_shard(
