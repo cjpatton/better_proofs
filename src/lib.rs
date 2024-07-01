@@ -1,5 +1,6 @@
 use std::ops::AddAssign;
 
+pub mod joy;
 pub mod prf;
 pub mod vdaf;
 
@@ -20,4 +21,16 @@ pub fn vec_add<F: AddAssign>(mut u: Vec<F>, v: Vec<F>) -> Vec<F> {
 /// advantage, e.g., for [PRFs](crate::prf).
 pub trait Distinguisher<G> {
     fn play(&self, game: G) -> Result<bool, Error>;
+}
+
+#[cfg(test)]
+pub(crate) mod test_utils {
+    use super::*;
+
+    pub(crate) struct TrivialDistinguisher;
+    impl<G> Distinguisher<G> for TrivialDistinguisher {
+        fn play(&self, _game: G) -> Result<bool, crate::Error> {
+            Ok(true)
+        }
+    }
 }
