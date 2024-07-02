@@ -303,7 +303,7 @@ where
             return Err("game not initialized");
         };
 
-        if self.eval.get(&cli_id).is_some() {
+        if self.eval.contains_key(&cli_id) {
             return Err("report already uploaded");
         }
 
