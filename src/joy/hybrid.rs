@@ -330,7 +330,7 @@ where
 /// CLAIM: For all [distinguishers](crate::Distinguisher) `adv`,
 ///
 /// ```text
-/// Pr[adv.play(G0::init(hybrid, false))] = Pr[adv.play(G1::init(hybrid))]
+/// Pr[adv.play(PubCpa::init(hybrid, false))] = Pr[adv.play(G1::init(hybrid))]
 /// ```
 pub struct G1<P: PubEnc, S> {
     enc: Hybrid<P, S>,
@@ -404,6 +404,12 @@ mod test_0_1 {
 /// ```text
 /// Pr[adv.play(G2::init(hybrid))] =
 ///     Pr[adv.play(FromHybridToPubEnc::init(PubCpa::init(pub_nec, true), sym_enc, false))]
+/// ```
+///
+/// CLAIM: For all [distinguishers](crate::Distinguisher) `adv`,
+///
+/// ```text
+/// Pr[adv.play(G4::init(hybrid))] = Pr[adv.play(PubCpa::init(hybrid, true))]
 /// ```
 pub struct G2<P: PubEnc, S> {
     enc: Hybrid<P, S>,
