@@ -51,7 +51,7 @@ where
         let tk_left = rng.gen();
         let tk_right = rng.gen();
         let c_pub = self.enc.pub_enc.encrypt(&self.pk, &tk_right);
-        let c_sym = self.enc.sym_enc.encrypt(&tk_left, m_right); // encrypt right plaintext
+        let c_sym = self.enc.sym_enc.encrypt(&tk_left, m_right);
         (c_pub, c_sym)
     }
 }

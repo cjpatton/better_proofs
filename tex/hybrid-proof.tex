@@ -1,0 +1,408 @@
+The proof is by a game-playing argument.
+%
+We begin with game $\code{G1}$ listed below:
+
+\begin{lstlisting}
+pub struct G1<P: PubEnc, S> {
+    enc: Hybrid<P, S>,
+    pk: P::PublicKey,
+}
+impl<P: PubEnc, S> G1<P, S> {
+    pub fn init(enc: Hybrid<P, S>) -> Self {
+        let (pk, _sk) = enc.pub_enc.key_gen();
+        Self { enc, pk }
+    }
+}
+impl<P: PubEnc, S> GetPublicKey for G1<P, S> {
+    type PublicKey = P::PublicKey;
+    fn get_pk(&self) -> &P::PublicKey {
+        &self.pk
+    }
+}
+impl<P, S> LeftOrRight for G1<P, S>
+where
+    S: SymEnc,
+    P: PubEnc<Plaintext = S::Key>,
+    Standard: Distribution<S::Key>,
+{
+    type Plaintext = S::Plaintext;
+    type Ciphertext = (P::Ciphertext, S::Ciphertext);
+    fn left_or_right(
+        &self,
+        m_left: &S::Plaintext,
+        _m_right: &S::Plaintext,
+    ) -> (P::Ciphertext, S::Ciphertext) {
+        let mut rng = thread_rng();
+        let tk_left = rng.gen();
+        let _tk_right = rng.gen(); // new temporary key (unused)
+        let c_pub = self.enc.pub_enc.encrypt(&self.pk, &tk_left);
+        let c_sym = self.enc.sym_enc.encrypt(&tk_left, m_left);
+        (c_pub, c_sym)
+    }
+}
+\end{lstlisting}
+%
+This game was obtained from \hyperref[fig/pubenc/security]{PubEnc} by fixing
+$\code{right == false}$, unrolling the call to $\code{self.enc.encrypt()}$ in
+the $\code{LeftOrRight}$ oracle, and adding code for generating a new temporary
+key, $\code{_tk_right}$. Let us call this new key (unused for the moment) the
+``right key'' and the existing key the ``left key''.
+%
+\begin{claim}[Equivalent-rewrite]
+  For all $A$,
+  \[
+     \Prob{A\code{.play(PubCpa::init(hybrid, false))}} =
+     \Prob{A\code{.play(G1::init(hybrid))}} \,.
+  \]
+\end{claim}
+%
+\cp{The main goal for this document is to identify the best methodology for
+establishing claims like this. The goal here seems simple, at least in
+principle: prove that the programs in this equality are equivalent, and thus
+the output being $\code{true}$ is equiprobable in both experiments.}
+
+Next, game $\code{G2}$ is obtained by applying the following patch to the
+$\code{LeftOrRight}$ oracle. By this we mean removing the lines beginning with
+``$\code{-}$'' and and adding the lines beginning with ``$\code{+}$'':
+%
+\begin{lstlisting}[style=patch]
+    fn left_or_right(
+        &self,
+        m_left: &S::Plaintext,
+-       _m_right: &S::Plaintext,
++       m_right: &S::Plaintext,
+    ) -> (P::Ciphertext, S::Ciphertext) {
+         let mut rng = thread_rng();
+         let tk_left = rng.gen();
+-        let _tk_right = rng.gen(); // new temporary key (unused)
+-        let c_pub = self.enc.pub_enc.encrypt(&self.pk, &tk_left);
++        let tk_right = rng.gen(); // new temporary key
++        let c_pub = self.enc.pub_enc.encrypt(&self.pk, &tk_right);
+         let c_sym = self.enc.sym_enc.encrypt(&tk_left, m_left);
+         (c_pub, c_sym)
+     }
+\end{lstlisting}
+%
+The patched oracle encrypts the right key rather than the left. The left key is
+still used to produce $\code{s_sym}$, so $\code{c_sym}$ is now independent of
+$\code{c_pub}$.
+
+We can reduce the attacker's ability to distinguish between $\code{G1}$ and
+$\code{G2}$ to the CPA security of $\code{pub_cpa}$.
+%
+Consider the following reduction, which transforms a $\code{hybrid}$ attacker
+into a $\code{pub_enc}$ attacker. For the moment, fix $\code{right == false}$;
+we will use $\code{right == true}$ in a later step.
+%
+\begin{lstlisting}
+pub struct FromHybridToPubEnc<P, S>
+where
+    P: PubEnc,
+{
+    sym_enc: S,
+    game: PubCpa<P>, // Instance of the game for `pub_enc`.
+    right: bool,
+}
+impl<P, S> FromHybridToPubEnc<P, S>
+where
+    P: PubEnc,
+{
+    pub fn init(game: PubCpa<P>, sym_enc: S, right: bool) -> Self {
+        Self {
+            game,
+            sym_enc,
+            right,
+        }
+    }
+}
+impl<P, S> GetPublicKey for FromHybridToPubEnc<P, S>
+where
+    P: PubEnc,
+{
+    type PublicKey = P::PublicKey;
+    fn get_pk(&self) -> &P::PublicKey {
+        self.game.get_pk()
+    }
+}
+impl<P, S> LeftOrRight for FromHybridToPubEnc<P, S>
+where
+    P: PubEnc,
+    S: SymEnc,
+    P: PubEnc<Plaintext = S::Key>,
+    Standard: Distribution<S::Key>,
+{
+    type Plaintext = S::Plaintext;
+    type Ciphertext = (P::Ciphertext, S::Ciphertext);
+    fn left_or_right(
+        &self,
+        m_left: &S::Plaintext,
+        m_right: &S::Plaintext,
+    ) -> (P::Ciphertext, S::Ciphertext) {
+        let mut rng = thread_rng();
+        let tk_left = rng.gen();
+        let tk_right = rng.gen();
+        // Simulation: If `self.left`, then transition from `G1` to `G2`;
+        // otherwise, transition from `G3` to `G4`. If `game.left`, then
+        // simulate the former; otherwise simulate the latter.
+        let c_pub = self.game.left_or_right(&tk_left, &tk_right);
+        let c_sym = if self.right {
+            self.sym_enc.encrypt(&tk_left, m_right)
+    } else {
+            self.sym_enc.encrypt(&tk_left, m_left)
+        };
+        (c_pub, c_sym)
+    }
+}
+\end{lstlisting}
+%
+The reduction is initialized with an instance of the $\code{PubCpa}$ game for
+$\code{pub_enc}$, denoted by $\code{game}$. It simulates the game for
+$\code{hybrid}$, except that instead of encrypting the left or right key
+directly, it invokes $\code{game.left_or_right()}$ and uses the response to
+produce the ciphertext. (See line 50.) This way the reduction simulaters
+$\code{G1}$ when $\code{game.left == false}$ and $\code{G2}$ otherwise.
+
+Let $R_{\code{12}}^A(\code{game}) =
+A\code{.play(FromHybridToPubEnc::init(game), sym_enc, false))}$.
+%
+We Have the following.
+
+\begin{claim}[Equivalent-by-reduction]\label{claim/proof/hybrid/12}
+  For all~$A$,
+  \[
+    \Prob{A\code{.play(G1::init(hybrid))}} =
+    \Prob{R_{\code{12}}^A(\code{PubEnc::init(pub_enc, false)})}
+  \]
+  and
+  \[
+    \Prob{A\code{.play(G2::init(hybrid))}} =
+    \Prob{R_{\code{12}}^A(\code{PubEnc::init(pub_enc, true)})} \,.
+  \]
+\end{claim}
+%
+\cp{Here again is a step that we need to prove formally. Like the previous
+claim, our goal is to prove that two pieces of code are equivalent.}
+%
+Then by definition,
+%
+\[
+  \Prob{A\code{.play(G1::init(hybrid))}} -
+  \Prob{A\code{.play(G2::init(hybrid))}} \leq
+  \Adv{cpa}_\code{pub_enc}(R_{\code{12}}^A) \,.
+\]
+
+Next, we obtain $\code{G3}$ from $\code{G2}$ by patching the
+$\code{LeftOrRight}$ oracle once more:
+%
+\begin{lstlisting}[style=patch]
+     fn left_or_right(
+         &self,
+-        m_left: &S::Plaintext,
+-        _m_right: &S::Plaintext,
++        _m_left: &S::Plaintext,
++        m_right: &S::Plaintext,
+     ) -> (P::Ciphertext, S::Ciphertext) {
+         let mut rng = thread_rng();
+         let tk_left = rng.gen();
+-        let tk_right = rng.gen(); // new temporary key
++        let tk_right = rng.gen();
+         let c_pub = self.enc.pub_enc.encrypt(&self.pk, &tk_right);
+-        let c_sym = self.enc.sym_enc.encrypt(&tk_left, m_left);
++        let c_sym = self.enc.sym_enc.encrypt(&tk_left, m_right);
+         (c_pub, c_sym)
+     }
+\end{lstlisting}
+%
+Now instead of encrypting the left plaintext, in the new game we encrypt the
+right plaintext. Because $\code{c_pub}$ is independent of $\code{c_sym}$, we
+can reduce the adversary's advantage in distinguishing $\code{G2}$ from
+$\code{G2}$ to its advantage in breaking $\code{pub_enc}$.
+%
+Consider the following reduction:
+%
+\begin{lstlisting}
+pub struct FromHybridToSymEnc<P, S>
+where
+    P: PubEnc,
+    S: SymEnc,
+{
+    pub_enc: P,
+    pk: P::PublicKey,
+    game: Cpa<S>, // Instance of the game for `sym_enc`
+}
+impl<P, S> FromHybridToSymEnc<P, S>
+where
+    P: PubEnc,
+    S: SymEnc,
+{
+    pub fn init(game: Cpa<S>, pub_enc: P) -> Self {
+        let (pk, _sk) = pub_enc.key_gen();
+        Self { pub_enc, pk, game }
+    }
+}
+impl<P, S> GetPublicKey for FromHybridToSymEnc<P, S>
+where
+    P: PubEnc,
+    S: SymEnc,
+{
+    type PublicKey = P::PublicKey;
+    fn get_pk(&self) -> &P::PublicKey {
+        &self.pk
+    }
+}
+impl<P, S> LeftOrRight for FromHybridToSymEnc<P, S>
+where
+    P: PubEnc,
+    S: SymEnc,
+    P: PubEnc<Plaintext = S::Key>,
+    Standard: Distribution<S::Key>,
+{
+    type Plaintext = S::Plaintext;
+    type Ciphertext = (P::Ciphertext, S::Ciphertext);
+    fn left_or_right(
+        &self,
+        m_left: &S::Plaintext,
+        m_right: &S::Plaintext,
+    ) -> (P::Ciphertext, S::Ciphertext) {
+        let tk_right = thread_rng().gen();
+        let c_pub = self.pub_enc.encrypt(&self.pk, &tk_right);
+        // Simulation: if `game.left`, then this simulates `G2`; otherwise, this
+        // simulates `G3`.
+        let c_sym = self.game.left_or_right(m_left, m_right);
+        (c_pub, c_sym)
+    }
+}
+\end{lstlisting}
+%
+This time the reduction gets an instance of the
+\hyperref[fig/symenc/security]{$\code{Cpa}$} game for $\code{sym_enc}$. It
+simulates the $\code{PubCpa}$ game for $\code{hybrid}$ by generating a dummy
+temporary key $\code{tk_right}$ and encrypting it to the public key generated at
+initialization. The symmetric ciphertext is produced by invoking
+$\code{game.left_or_right(m_left, m_right)}$; by construction, the encryption
+key is independent of $\code{c_pub}$, as it is in both games.
+%
+Similar to the previous step, when $\code{game.right == false}$, the reduction
+simulates $\code{G2}$ and simulates $\code{G3}$ otherwise.
+
+Let $R_{\code{23}}^A(\code{game}) =
+A\code{.play(FromHybridToSymEnc::init(game), pub_enc))}$.
+%
+We Have the following.
+
+\begin{claim}[Equivalent-by-reduction]
+  For all~$A$,
+  \[
+    \Prob{A\code{.play(G2::init(hybrid))}} =
+    \Prob{R_{\code{23}}^A(\code{Cpa::init(sym_enc, false)})}
+  \]
+  and
+  \[
+    \Prob{A\code{.play(G3::init(hybrid))}} =
+    \Prob{R_{\code{23}}^A(\code{Cpa::init(sym_enc, true)})} \,.
+  \]
+\end{claim}
+%
+\cp{Here again is a step that we need to prove formally.}
+%
+Then by definition,
+%
+\[
+  \Prob{A\code{.play(G2::init(hybrid))}} -
+  \Prob{A\code{.play(G3::init(hybrid))}} \leq
+  \Adv{cpa}_\code{sym_enc}(R_{\code{23}}^A) \,.
+\]
+
+Finally, we obtain $\code{G4}$ from $\code{G3}$ by applying the following patch:
+%
+\begin{lstlisting}[style=patch]
+    fn left_or_right(
+         &self,
+         _m_left: &S::Plaintext,
+         m_right: &S::Plaintext,
+     ) -> (P::Ciphertext, S::Ciphertext) {
+         let mut rng = thread_rng();
+-        let tk_left = rng.gen();
++        let _tk_left = rng.gen(); // no longer used
+         let tk_right = rng.gen();
+         let c_pub = self.enc.pub_enc.encrypt(&self.pk, &tk_right);
+-        let c_sym = self.enc.sym_enc.encrypt(&tk_left, m_right);
++        let c_sym = self.enc.sym_enc.encrypt(&tk_right, m_right); // use right temporary key
+         (c_pub, c_sym)
+     }
+\end{lstlisting}
+%
+In the new game, we encrypt the right temporary key instead of the left. Were
+again we bound the attacker's distinguishing advantage by reducing to CPA
+security of $\code{pub_enc}$.
+%
+We can reuse $\code{FromHybridToPubEnc}$, except we fix $\code{right == true}$.
+%
+Let $R_{\code{34}}^A(\code{game}) =
+A\code{.play(FromHybridToPubEnc::init(game), sym_enc, true))}$.
+%
+We Have the following.
+
+\begin{claim}[Equivalent-by-reduction]
+  For all~$A$,
+  \[
+    \Prob{A\code{.play(G3::init(hybrid))}} =
+    \Prob{R_{\code{34}}^A(\code{PubEnc::init(pub_enc, false)})}
+  \]
+  and
+  \[
+    \Prob{A\code{.play(G4::init(hybrid))}} =
+    \Prob{R_{\code{34}}^A(\code{PubEnc::init(pub_enc, true)})} \,.
+  \]
+\end{claim}
+%
+\cp{The proof is pretty much the same as for Claim~\ref{claim/proof/hybrid/12};
+the only difference is that the setting of the $\code{right}$ flag. In fact, we
+may be able to prove both claims at once.}
+%
+It follows by definition that
+%
+Then by definition,
+%
+\[
+  \Prob{A\code{.play(G3::init(hybrid))}} -
+  \Prob{A\code{.play(G4::init(hybrid))}} \leq
+  \Adv{cpa}_\code{pub_enc}(R_{\code{34}}^A) \,.
+\]
+
+Finally, game $\code{G4}$ is equivalent to $\code{PubCpa}$ with $\code{right ==
+true}$.
+%
+\begin{claim}[Equivalent-rewrite]
+  For all $A$,
+  \[
+     \Prob{A\code{.play(G1::init(hybrid))}} =
+     \Prob{A\code{.play(PubCpa::init(hybrid, true))}} \,.
+  \]
+\end{claim}
+%
+\cp{To be proven.}
+
+So far we have that
+%
+\[
+  \Adv{cpa}_\code{hybrid}(A) \leq
+    \Adv{cpa}_\code{pub_cpa}(R_{\code{12}}^A) +
+    \Adv{cpa}_\code{sym_cpa}(R_{\code{23}}^A) +
+    \Adv{cpa}_\code{pub_cpa}(R_{\code{34}}^A) \,.
+\]
+%
+Let $B = R_{\code{23}}^A$.
+%
+Define $C$ as follows. Flip a coin: if the outcome is $\code{false}$, then run
+$R_{\code{12}}^A$; if the outcome is $\code{true}$, then run $R_{\code{34}}^A$.
+%
+Applying the law of total probability,
+%
+\[
+  \Adv{cpa}_\code{pub_cpa}(R_{\code{12}}^A) +
+  \Adv{cpa}_\code{pub_cpa}(R_{\code{13}}^A)
+  = 2\cdot \Adv{cpa}_\code{pub_cpa}(C) \,.
+\]
+%
+The claimed bound follows.

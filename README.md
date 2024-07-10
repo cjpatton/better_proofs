@@ -50,17 +50,5 @@ in the language native to the tool, may not work:
 
 This repo can be thought of an experiment to assess these costs.
 
-## What
-
-The crate has two modules, each containing a toy example to get us started:
-
-- `prf` defines secure PRFs and gives a proof sketch of the PRP/PRF switching
-  lemma [[BR06]] consisting of a sequence of game transitions.
-
-- `vdaf` defines security properties of VDAFs [draft-irtf-cfrg-vdaf]. It also
-  gives two constructions, one of which is trivially private, but not robust,
-  and another that is trivially robust, but not private. The proofs *should* be
-  simple :)
-
 [BR06]: https://eprint.iacr.org/2004/331
 [draft-irtf-cfrg-vdaf]: https://datatracker.ietf.org/doc/draft-irtf-cfrg-vdaf

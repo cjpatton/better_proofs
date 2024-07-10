@@ -13,7 +13,7 @@ where
     P: PubEnc,
 {
     sym_enc: S,
-    game: PubCpa<P>,
+    game: PubCpa<P>, // Instance of the game for `pub_enc`.
     right: bool,
 }
 impl<P, S> FromHybridToPubEnc<P, S>
@@ -54,9 +54,9 @@ where
         let mut rng = thread_rng();
         let tk_left = rng.gen();
         let tk_right = rng.gen();
-        // Simulation: If `self.left`, then transition from `G1` to `G2`; otherwise, transition
-        // from `G3` to `G4`. If `game.left`, then simulate the former; otherwise simulate the
-        // latter.
+        // Simulation: If `self.left`, then transition from `G1` to `G2`;
+        // otherwise, transition from `G3` to `G4`. If `game.left`, then
+        // simulate the former; otherwise simulate the latter.
         let c_pub = self.game.left_or_right(&tk_left, &tk_right);
         let c_sym = if self.right {
             self.sym_enc.encrypt(&tk_left, m_right)
@@ -75,7 +75,7 @@ where
 {
     pub_enc: P,
     pk: P::PublicKey,
-    game: Cpa<S>,
+    game: Cpa<S>, // Instance of the game for `sym_enc`
 }
 impl<P, S> FromHybridToSymEnc<P, S>
 where
@@ -111,11 +111,10 @@ where
         m_left: &S::Plaintext,
         m_right: &S::Plaintext,
     ) -> (P::Ciphertext, S::Ciphertext) {
-        let mut rng = thread_rng();
-        let _tk_left = rng.gen();
-        let tk_right = rng.gen();
+        let tk_right = thread_rng().gen();
         let c_pub = self.pub_enc.encrypt(&self.pk, &tk_right);
-        // Simulation: if `game.left`, then this simulates `G2`; otherwise, this simulates `G3`.
+        // Simulation: if `game.left`, then this simulates `G2`; otherwise, this
+        // simulates `G3`.
         let c_sym = self.game.left_or_right(m_left, m_right);
         (c_pub, c_sym)
     }

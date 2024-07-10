@@ -56,7 +56,11 @@ impl<E: SymEnc> Cpa<E> {
 impl<E: SymEnc> LeftOrRight for Cpa<E> {
     type Plaintext = E::Plaintext;
     type Ciphertext = E::Ciphertext;
-    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
+    fn left_or_right(
+        &self,
+        m_left: &E::Plaintext,
+        m_right: &E::Plaintext,
+    ) -> E::Ciphertext {
         // NOTE This definition implicitly requires length hiding.
         if self.right {
             self.enc.encrypt(&self.k, m_right)
@@ -78,7 +82,11 @@ pub trait PubEnc {
     type Ciphertext;
     fn key_gen(&self) -> (Self::PublicKey, Self::SecretKey);
     fn encrypt(&self, pk: &Self::PublicKey, m: &Self::Plaintext) -> Self::Ciphertext;
-    fn decrypt(&self, sk: &Self::SecretKey, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
+    fn decrypt(
+        &self,
+        sk: &Self::SecretKey,
+        c: &Self::Ciphertext,
+    ) -> Option<Self::Plaintext>;
 }
 
 // Security
@@ -91,8 +99,8 @@ pub struct PubCpa<E: PubEnc> {
 }
 
 impl<E: PubEnc> PubCpa<E> {
-    /// Initialize the game. If `right` is `true`, then the [`LeftOrRight`] oracle encrypts the
-    /// right plaintext.
+    /// Initialize the game. If `right` is `true`, then the [`LeftOrRight`] oracle
+    /// encrypts the right plaintext.
     pub fn init(enc: E, right: bool) -> Self {
         let (pk, _sk) = enc.key_gen();
         Self { enc, pk, right }
@@ -109,7 +117,11 @@ impl<E: PubEnc> GetPublicKey for PubCpa<E> {
 impl<E: PubEnc> LeftOrRight for PubCpa<E> {
     type Plaintext = E::Plaintext;
     type Ciphertext = E::Ciphertext;
-    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
+    fn left_or_right(
+        &self,
+        m_left: &E::Plaintext,
+        m_right: &E::Plaintext,
+    ) -> E::Ciphertext {
         // NOTE This definition implicitly requires length hiding.
         if self.right {
             self.enc.encrypt(&self.pk, m_right)
@@ -187,7 +199,11 @@ where
         self.pub_enc.key_gen()
     }
 
-    fn encrypt(&self, pk: &P::PublicKey, m: &S::Plaintext) -> (P::Ciphertext, S::Ciphertext) {
+    fn encrypt(
+        &self,
+        pk: &P::PublicKey,
+        m: &S::Plaintext,
+    ) -> (P::Ciphertext, S::Ciphertext) {
         let tk = thread_rng().gen(); // "temporary key"
         let c_pub = self.pub_enc.encrypt(pk, &tk);
         let c_sym = self.sym_enc.encrypt(&tk, m);

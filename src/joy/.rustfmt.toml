@@ -1,0 +1,3 @@
+# We need a smaller column width than default because we use code samples from
+# this module as LaTeX listings.
+max_width = 90

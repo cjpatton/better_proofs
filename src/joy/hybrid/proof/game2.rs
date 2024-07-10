@@ -57,8 +57,8 @@ where
     ) -> (P::Ciphertext, S::Ciphertext) {
         let mut rng = thread_rng();
         let tk_left = rng.gen();
-        let tk_right = rng.gen();
-        let c_pub = self.enc.pub_enc.encrypt(&self.pk, &tk_right); // produced with new temporary key
+        let tk_right = rng.gen(); // new temporary key
+        let c_pub = self.enc.pub_enc.encrypt(&self.pk, &tk_right);
         let c_sym = self.enc.sym_enc.encrypt(&tk_left, m_left);
         (c_pub, c_sym)
     }

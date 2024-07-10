@@ -1,0 +1,433 @@
+\documentclass{article}
+\usepackage{amsmath, amsthm}
+\usepackage{listings}
+\usepackage{listings-rust}
+\usepackage[margin=1in]{geometry}
+\usepackage{sourcecodepro}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage[svgnames]{xcolor}
+
+\lstset{
+  language=rust,
+  style=boxed,
+}
+
+% Colors
+
+\definecolor{darkgreen}{RGB}{30,97,0}
+
+% Theorems
+
+\newtheorem{claim}{Claim}
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{remark}{Remark}
+
+% Macros
+
+\newcommand{\authnote}[3]{%
+  {
+    \color{#1}%
+    \textbf{[#2:~}%
+    {%
+      #3%
+    }%
+    \textbf{]}%
+  }%
+}
+\newcommand{\cp}[1]{\authnote{darkgreen}{Chris P.}{#1}}
+
+\newcommand{\Adv}[1]{\textrm{\textup{Adv}}^{\textup{#1}}}
+\newcommand{\Prob}[1]{\Pr\hspace{-1pt}\big[\,#1\,\big]}
+\newcommand{\code}[1]{\textrm{\textup{\lstinline{#1}}}}
+
+\title{Better proofs}
+\author{Christopher Patton (chrispatton+ietf@gmail.com)}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  \cp{TODO.}
+\end{abstract}
+
+\section{Introduction}
+
+\cp{TODO.}
+
+\section{Notation}
+
+All algorithms, including adversaries, are rust programs without $\code{async}$
+semantics.
+%
+Syntax and oracles are defined as rust traits.
+%
+Let $\code{block}$ be a rust code block whose last statement is an expression
+that evaluates to a $\code{bool}$.
+%
+We denote by $\Prob{\code{block}}$ the probability that execution of
+$\code{block}$ results in $\code{true}$.
+%
+By convention, an adversary's runtime includes the time it takes to initialize
+its game and evaluate its oracle queries.
+
+\section{Example: Hybrid Encryption}
+
+In this section we consider the hybrid public-key encryption (PKE) scheme of
+\cite[Chapter~15]{joy}.
+%
+The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
+and \emph{equivalent-by-reduction}.
+
+\subsection{Syntax}
+
+A PKE scheme implements the $\code{PubEnc}$ trait listed in
+Figure~\ref{fig/pubenc/syntax}.
+%
+Let $\code{enc: E}$ implement $\code{PubEnc}$.
+%
+We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
+\code{E::Plaintext}$ it holds that
+%
+\[
+  \Prob{
+    \code{let (pk, sk) = enc.key_gen();
+    enc.decrypt(sk, enc.encrypt(pk, m)) == Some(m)}
+  } = 1 \,.
+\]
+
+% ../src/joy/hybrid/mod.rs
+\begin{figure}
+\begin{lstlisting}
+pub trait PubEnc {
+    type PublicKey;
+    type SecretKey;
+    type Plaintext;
+    type Ciphertext;
+    fn key_gen(&self) -> (Self::PublicKey, Self::SecretKey);
+    fn encrypt(&self, pk: &Self::PublicKey, m: &Self::Plaintext) -> Self::Ciphertext;
+    fn decrypt(
+        &self,
+        sk: &Self::SecretKey,
+        c: &Self::Ciphertext,
+    ) -> Option<Self::Plaintext>;
+}
+\end{lstlisting}
+  \caption{Syntax of public-key encryption (PKE).}
+  \label{fig/pubenc/syntax}
+\end{figure}
+
+\subsection{Security}
+
+Security under chosen plaintext attack (CPA) is defined by the $\code{PubCpa}$
+game in Figure~\ref{fig/pubenc/security}.
+%
+It captures a left-or-right notion of indistinguishability by giving the
+attacker an oracle \hyperref[sec/traits]{$\code{LeftOrRight}$} that encrypts
+one of two messages chosen by the attacker and returns the ciphertext.
+%
+Which message is encrypted is controlled by a boolean $\code{right}$ used to
+initialize the game.
+
+\begin{definition}[{\cite[Definition 15.1]{joy}}]
+  Let~$A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$}.
+  %
+  Let~$\code{enc}$ implement \hyperref[fig/pubenc/syntax]{$\code{PubEnc}$}.
+  %
+  Define the advantage of attacker~$A$ in breaking the security of
+  $\code{enc}$ under CPA as
+  %
+  \[
+    \Adv{cpa}_{\code{enc}}(A) =
+      \Prob{A\code{.play(PubCpa::init(enc, false))}} -
+      \Prob{A\code{.play(PubCpa::init(enc, true))}} \,,
+  \]
+  %
+  where $\code{PubCpa}$ is as defined in Figure~\ref{fig/pubenc/security}.
+  %
+  Informally, we say $\code{enc}$ is secure under CPA if every efficient
+  attacker has small advantage.
+\end{definition}
+
+\begin{remark}
+  This definition implicitly requires length hiding, since there is no
+  requirement that the challenge plaintext $\code{m_left}$ and $\code{m_right}$
+  have the same length. For most PKE schemes, the length of the ciphertext is a
+  function of the length of the plaintext.
+\end{remark}
+
+% ../src/joy/hybrid/mod.rs
+\begin{figure}
+\begin{lstlisting}
+pub struct PubCpa<E: PubEnc> {
+    enc: E,
+    pk: E::PublicKey,
+    right: bool,
+}
+impl<E: PubEnc> PubCpa<E> {
+    pub fn init(enc: E, right: bool) -> Self {
+        let (pk, _sk) = e.key_gen();
+        Self { enc, pk, right }
+    }
+}
+impl<E: PubEnc> GetPublicKey for PubCpa<E> {
+    type PublicKey = E::PublicKey;
+    fn get_pk(&self) -> &E::PublicKey {
+        &self.pk
+    }
+}
+impl<E: PubEnc> LeftOrRight for PubCpa<E> {
+    type Plaintext = E::Plaintext;
+    type Ciphertext = E::Ciphertext;
+    fn left_or_right(
+        &self,
+        m_left: &E::Plaintext,
+        m_right: &E::Plaintext,
+    ) -> E::Ciphertext {
+        if self.right {
+            self.enc.encrypt(&self.pk, m_right)
+        } else {
+            self.enc.encrypt(&self.pk, m_left)
+        }
+    }
+}
+\end{lstlisting}
+  \caption{Game \lstinline{PubCpa} for defining security of PKE under chosen
+  plaintext attack (CPA).}
+  \label{fig/pubenc/security}
+\end{figure}
+
+
+\subsection{Construction}
+
+In practice, PKE schemes are constructed by combining symmetric encryption with
+a mechanism for encapsulating the encryption key to the intended
+recipient~\cite{rfc9180} (that is, the holder of the secret key corresponding
+to the public encapsulation key).
+%
+By way of gentle introduction to this paradigm, Mike Rosulek gives a
+construction of CPA-secure, hybrid encryption in ``The Joy of
+Cryptography''~\cite{joy}.
+%
+We recall this construction in Figure~\ref{fig/hybrid}.
+
+\begin{figure}[t]
+\begin{lstlisting}
+pub struct Hybrid<P, S> {
+    pub pub_enc: P,
+    pub sym_enc: S,
+}
+impl<P, S> PubEnc for Hybrid<P, S>
+where
+    S: SymEnc,
+    P: PubEnc<Plaintext = S::Key>,
+    Standard: Distribution<S::Key>,
+{
+    type PublicKey = P::PublicKey;
+    type SecretKey = P::SecretKey;
+    type Plaintext = S::Plaintext;
+    type Ciphertext = (P::Ciphertext, S::Ciphertext);
+    fn key_gen(&self) -> (P::PublicKey, P::SecretKey) {
+        self.pub_enc.key_gen()
+    }
+    fn encrypt(
+        &self,
+        pk: &P::PublicKey,
+        m: &S::Plaintext,
+    ) -> (P::Ciphertext, S::Ciphertext) {
+        let tk = thread_rng().gen(); // "temporary key"
+        let c_pub = self.pub_enc.encrypt(pk, &tk);
+        let c_sym = self.sym_enc.encrypt(&tk, m);
+        (c_pub, c_sym)
+    }
+    fn decrypt(
+        &self,
+        sk: &Self::SecretKey,
+        (c_pub, c_sym): &(P::Ciphertext, S::Ciphertext),
+    ) -> Option<Self::Plaintext> {
+        let tk = self.pub_enc.decrypt(sk, c_pub)?;
+        let m = self.sym_enc.decrypt(&tk, c_sym)?;
+        Some(m)
+    }
+}
+\end{lstlisting}
+  \caption{Hybrid PKE scheme of \cite[Construction 15.8]{joy}.}
+  \label{fig/hybrid}
+\end{figure}
+
+This construction transforms a symmetric encryption scheme $\code{sym_enc: S}$
+into a PKE scheme.
+%
+The syntax and security of symmetric encryption are defined similarly to PKE,
+except there is no public key; we defer the formal definition to
+Appendix~\ref{sec/symenc}.
+%
+The transformation involves a PKE scheme $\code{pub_enc: E}$ with a small
+plaintext space. In particular, we require that plaintext space of
+$\code{pub_enc}$ is the same as the key space for $\code{sym_enc}$. Formally,
+$\code{E: PubEnc<Plaintext = S::Key>}$ (see line 8).
+
+To encrypt a plaintext, we choose a ``temporary key'' $\code{tk}$ uniform
+randomly from the key space of $\code{sym_enc}$.
+%
+We then encrypt $\code{tk}$ using the PKE scheme $\code{pub_enc}$.
+%
+Finally, we encrypt the plaintext under $\code{tk}$ and output both
+ciphertexts.
+
+\begin{theorem}\label{thm/hybrid}
+  Suppose that $\code{pub_enc}$ and $\code{sym_enc}$ satisfy the constraints of
+  Figure~\ref{fig/hybrid} and let $\code{hybrid} = \code{Hybrid\{
+    pub_enc, sym_enc \}}$.
+  %
+  Then for every $\code{hybrid}$-attacker $A$ there exist a
+  $\code{sym_enc}$-attacker $B$ and a $\code{pub_enc}$-attacker $C$ with
+  the same runtime as $A$ for which
+  %
+  \[
+    \Adv{cpa}_\code{hybrid}(A) \leq
+      \Adv{cpa}_\code{sym_enc}(B) +
+      2\cdot\Adv{cpa}_\code{pub_enc}(C) \,.
+  \]
+\end{theorem}
+
+\begin{proof}
+  \input{hybrid-proof}
+\end{proof}
+
+\section{Example: The PRP/PRF Switching Lemma}
+
+In this section we fix the PRP/PRF switching lemma~\cite{br06}, which states
+that a good pseudorandom permutation (PRP) is a good pseudorandom function
+(PRF) up to birthday attacks.
+%
+The proof demonstrates the \emph{equivalent-until-bad} transition.
+
+\cp{TODO.}
+
+\bibliographystyle{plain} % We choose the "plain" reference style
+\bibliography{references}
+
+\appendix
+
+\section{Deferred Definitions}
+
+\subsection{Symmetric Encryption}
+\label{sec/symenc}
+
+A symmetric encryption scheme implements the $\code{SymEnc}$ trait listed in
+Figure~\ref{fig/symenc/syntax}.
+%
+Let $\code{enc: E}$ implement $\code{SymEnc}$.
+%
+We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
+\code{E::Plaintext}$ it holds that
+%
+\[
+  \Prob{
+    \code{let k = e.key_gen();
+    enc.decrypt(k, enc.encrypt(k, m)) == Some(m)}
+  } = 1 \,.
+\]
+%
+Security under chosen plaintext attack (CPA) is defined by the $\code{Cpa}$
+game in Figure~\ref{fig/symenc/security}.
+
+\begin{definition}[{\cite[Definition 7.1]{joy}}]
+  Let $A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$}.
+  %
+  Let~$\code{enc}$ implement \hyperref[fig/symenc/syntax]{$\code{SymEnc}$}.
+  %
+  Define the advantage of~$A$ in breaking the security of $\code{enc}$ under CPA
+  as
+  %
+  \[
+    \Adv{cpa}_{\code{enc}}(A) =
+      \Prob{A\code{.play(Cpa::init(enc, false))}} -
+      \Prob{A\code{.play(Cpa::init(enc, true))}} \,.
+  \]
+  %
+  Informally, we say $\code{enc}$ is secure under CPA if every efficient adversary
+  has small advantage.
+\end{definition}
+
+% ../src/joy/hybrid/mod.rs
+\begin{figure}
+\begin{lstlisting}
+pub trait SymEnc {
+    type Key;
+    type Plaintext;
+    type Ciphertext;
+    fn key_gen(&self) -> Self::Key;
+    fn encrypt(&self, k: &Self::Key, m: &Self::Plaintext) -> Self::Ciphertext;
+    fn decrypt(&self, k: &Self::Key, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
+}
+\end{lstlisting}
+\begin{lstlisting}
+pub struct Cpa<E: SymEnc> {
+    e: E,
+    k: E::Key,
+    right: bool,
+}
+impl<E: SymEnc> Cpa<E> {
+    pub fn init(e: E, right: bool) -> Self {
+        let k = e.key_gen();
+        Self { e, k, right }
+    }
+}
+impl<E: SymEnc> LeftOrRight for Cpa<E> {
+    type Plaintext = E::Plaintext;
+    type Ciphertext = E::Ciphertext;
+    fn left_or_right(
+        &self,
+        m_left: &E::Plaintext,
+        m_right: &E::Plaintext,
+    ) -> E::Ciphertext {
+        if self.right {
+            self.e.encrypt(&self.k, m_right)
+        } else {
+            self.e.encrypt(&self.k, m_left)
+        }
+    }
+}
+\end{lstlisting}
+  \caption{Top: syntax of symmetric encryption. Bottom: game $\code{Cpa}$
+  for defining security of symmetric encryption under chosen plaintext attack
+  (CPA) of symmetric encryption.}
+  \label{fig/symenc/syntax}
+  \label{fig/symenc/security}
+\end{figure}
+
+\subsection{Traits}
+\label{sec/traits}.
+
+\begin{lstlisting}
+/// Left-or-right encryption oracle.
+pub trait LeftOrRight {
+    type Plaintext;
+    type Ciphertext;
+    fn left_or_right(
+        &self,
+        m_left: &Self::Plaintext,
+        m_right: &Self::Plaintext,
+    ) -> Self::Ciphertext;
+}
+
+/// Oracle for obtaining the public key in a public-key cryptosystem.
+pub trait GetPublicKey {
+    type PublicKey;
+    fn get_pk(&self) -> &Self::PublicKey;
+}
+
+/// A generic distinguishing attacker.
+///
+/// The attacker gets as input a "game" and outputs a bit. The output is used
+/// to define a notion of advantage.
+pub trait Distinguisher<G> {
+    fn play(&self, game: G) -> Result<bool, Error>;
+}
+\end{lstlisting}
+
+\end{document}
