@@ -189,7 +189,6 @@ impl<E: SymEnc> LeftOrRight for Cpa<E> {
   \label{fig/pubenc/syntax}
 \end{figure}
 
-
 \subsection{Construction}
 
 In practice, PKE schemes are constructed by combining symmetric encryption with
@@ -291,13 +290,20 @@ that a good pseudorandom permutation (PRP) is a good pseudorandom function
 %
 The proof demonstrates the \emph{equivalent-until-bad} transition.
 
+Syntactically, both a PRP and PRF implement the $\code{Eval}$ trait listed in
+Figure~\ref{fig/func/syntax}.\footnote{A PRP also implements the inverse of
+$\code{Eval::eval()}$. We do not list this syntax because it is not needed
+here.}
+%
+
+
 \begin{figure}
 \begin{lstlisting}
 /// Syntax.
 pub trait Func {
     type Key;
-    type Domain: std::hash::Hash + Eq + PartialEq + ?Sized;
-    type Range: Clone + std::hash::Hash + Eq + PartialEq;
+    type Domain: ?Sized;
+    type Range;
     fn eval(&self, k: &Self::Key, x: &Self::Domain) -> Self::Range;
 }
 
@@ -311,10 +317,8 @@ where
     Standard: Distribution<F::Key>,
 {
     pub fn with(f: F) -> Self {
-        Self {
-            f,
-            k: thread_rng().gen(),
-        }
+        let k = thread_rng().gen();
+        Self { f, k }
     }
 }
 impl<F: Func> Eval<F> for Real<F> {
@@ -323,7 +327,8 @@ impl<F: Func> Eval<F> for Real<F> {
     }
 }
 \end{lstlisting}
-  \caption{Syntax and real security game for PRPs and PRFs.}
+  \caption{Syntax and real security game for PRPs and PRFs. The ideal games are
+  listed in Appendix~\ref{sec/func/ideal}.}
   \label{fig/func/syntax}
   \label{fig/func/real}
 \end{figure}
@@ -331,62 +336,6 @@ impl<F: Func> Eval<F> for Real<F> {
 
 
 
-\begin{figure}
-\begin{lstlisting}
-/// Ideal game for defining PRP security.
-#[derive(Default)]
-pub struct RandPerm<F: Func>
-where
-    F::Domain: Sized,
-{
-    table: HashMap<F::Domain, F::Range>,
-    range: HashSet<F::Range>,
-}
-impl<F: Func> Eval<F> for RandPerm<F>
-where
-    Standard: Distribution<F::Range>,
-    F::Domain: Clone,
-{
-    fn eval(&mut self, x: &F::Domain) -> F::Range {
-        let mut rng = thread_rng();
-        self.table
-            .entry(x.clone())
-            .or_insert(loop {
-                let y = rng.gen();
-                if !self.range.contains(&y) {
-                    self.range.insert(y.clone());
-                    break y;
-                }
-            })
-            .clone()
-    }
-}
-
-/// Ideal game for defining PRF security.
-#[derive(Default)]
-pub struct RandFunc<F: Func>
-where
-    F::Domain: Sized,
-{
-    table: HashMap<F::Domain, F::Range>,
-}
-impl<F: Func> Eval<F> for RandFunc<F>
-where
-    Standard: Distribution<F::Range>,
-    F::Domain: Clone,
-{
-    fn eval(&mut self, x: &F::Domain) -> F::Range {
-        self.table
-            .entry(x.clone())
-            .or_insert(thread_rng().gen())
-            .clone()
-    }
-}
-\end{lstlisting}
-  \caption{Ideal games for defining security of PRP and PRFs.}
-  \label{fig/func/ideal-prp}
-  \label{fig/func/ideal-prf}
-\end{figure}
 
 \bibliographystyle{plain} % We choose the "plain" reference style
 \bibliography{references}
@@ -478,8 +427,65 @@ impl<E: SymEnc> LeftOrRight for Cpa<E> {
   \label{fig/symenc/security}
 \end{figure}
 
+\subsection{Ideal games for defining PRPs and PRFs}
+\label{sec/func/ideal}
+
+\begin{lstlisting}
+/// Ideal game for defining PRP security.
+#[derive(Default)]
+pub struct RandPerm<F: Func>
+where
+    F::Domain: Sized,
+{
+    table: HashMap<F::Domain, F::Range>,
+    range: HashSet<F::Range>,
+}
+impl<F: Func> Eval<F> for RandPerm<F>
+where
+    Standard: Distribution<F::Range>,
+    F::Domain: Clone + std::hash::Hash + Eq,
+    F::Range: Clone + std::hash::Hash + Eq,
+{
+    fn eval(&mut self, x: &F::Domain) -> F::Range {
+        let mut rng = thread_rng();
+        self.table
+            .entry(x.clone())
+            .or_insert(loop {
+                let y = rng.gen();
+                if !self.range.contains(&y) {
+                    self.range.insert(y.clone());
+                    break y;
+                }
+            })
+            .clone()
+    }
+}
+
+/// Ideal game for defining PRF security.
+#[derive(Default)]
+pub struct RandFunc<F: Func>
+where
+    F::Domain: Sized,
+{
+    table: HashMap<F::Domain, F::Range>,
+}
+impl<F: Func> Eval<F> for RandFunc<F>
+where
+    Standard: Distribution<F::Range>,
+    F::Domain: Clone + std::hash::Hash + Eq,
+    F::Range: Clone + std::hash::Hash + Eq,
+{
+    fn eval(&mut self, x: &F::Domain) -> F::Range {
+        self.table
+            .entry(x.clone())
+            .or_insert(thread_rng().gen())
+            .clone()
+    }
+}
+\end{lstlisting}
+
 \subsection{Traits}
-\label{sec/traits}.
+\label{sec/traits}
 
 \begin{lstlisting}
 /// A generic distinguishing attacker.

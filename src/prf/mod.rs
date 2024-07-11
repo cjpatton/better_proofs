@@ -31,8 +31,8 @@ use rand::{distributions::Standard, prelude::*};
 /// A keyed function (e.g., a MAC).
 pub trait Func {
     type Key;
-    type Domain: std::hash::Hash + Eq + PartialEq + ?Sized;
-    type Range: Clone + std::hash::Hash + Eq + PartialEq;
+    type Domain: ?Sized;
+    type Range;
     fn eval(&self, k: &Self::Key, x: &Self::Domain) -> Self::Range;
 }
 
@@ -46,7 +46,7 @@ pub trait Eval<F: Func> {
     fn eval(&mut self, x: &F::Domain) -> F::Range;
 }
 
-/// A [`Func`] with a randomly generated key.
+/// Real game for defining PRP and PRF security.
 pub struct Real<F: Func> {
     f: F,
     k: F::Key,
@@ -56,10 +56,8 @@ where
     Standard: Distribution<F::Key>,
 {
     pub fn with(f: F) -> Self {
-        Self {
-            f,
-            k: thread_rng().gen(),
-        }
+        let k = thread_rng().gen();
+        Self { f, k }
     }
 }
 impl<F: Func> Eval<F> for Real<F> {
@@ -68,7 +66,7 @@ impl<F: Func> Eval<F> for Real<F> {
     }
 }
 
-/// A lazy-sampled random function.
+/// Ideal game for defining PRF security.
 #[derive(Default)]
 pub struct RandFunc<F: Func>
 where
@@ -79,7 +77,8 @@ where
 impl<F: Func> Eval<F> for RandFunc<F>
 where
     Standard: Distribution<F::Range>,
-    F::Domain: Clone,
+    F::Domain: Clone + std::hash::Hash + Eq,
+    F::Range: Clone + std::hash::Hash + Eq,
 {
     fn eval(&mut self, x: &F::Domain) -> F::Range {
         self.table
@@ -89,7 +88,7 @@ where
     }
 }
 
-/// A lazy-sampled random permutation.
+/// Ideal game for defining PRP security.
 #[derive(Default)]
 pub struct RandPerm<F: Func>
 where
@@ -101,7 +100,8 @@ where
 impl<F: Func> Eval<F> for RandPerm<F>
 where
     Standard: Distribution<F::Range>,
-    F::Domain: Clone,
+    F::Domain: Clone + std::hash::Hash + Eq,
+    F::Range: Clone + std::hash::Hash + Eq,
 {
     fn eval(&mut self, x: &F::Domain) -> F::Range {
         let mut rng = thread_rng();
@@ -255,7 +255,8 @@ pub mod lemma_prp_to_prf {
     impl<F: Func> Eval<F> for G2<F>
     where
         Standard: Distribution<F::Range>,
-        F::Domain: Clone,
+        F::Domain: Clone + std::hash::Hash + Eq,
+        F::Range: Clone + std::hash::Hash + Eq,
     {
         #[allow(clippy::never_loop)]
         fn eval(&mut self, x: &F::Domain) -> F::Range {
