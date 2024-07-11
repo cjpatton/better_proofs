@@ -33,7 +33,6 @@ pub trait Func {
     type Key;
     type Domain: std::hash::Hash + Eq + PartialEq + ?Sized;
     type Range: Clone + std::hash::Hash + Eq + PartialEq;
-
     fn eval(&self, k: &Self::Key, x: &Self::Domain) -> Self::Range;
 }
 
@@ -42,8 +41,8 @@ pub trait Perm: Func {
     fn eval_inv(&self, k: &Self::Key, y: &Self::Range) -> Self::Domain;
 }
 
-/// Interface for an attacker playing the [`Real`], [`RandFunc`], or [`RandPerm`] game.
-pub trait Game<F: Func> {
+/// Oracle for evaluating a keyed function.
+pub trait Eval<F: Func> {
     fn eval(&mut self, x: &F::Domain) -> F::Range;
 }
 
@@ -52,7 +51,6 @@ pub struct Real<F: Func> {
     f: F,
     k: F::Key,
 }
-
 impl<F: Func> Real<F>
 where
     Standard: Distribution<F::Key>,
@@ -64,8 +62,7 @@ where
         }
     }
 }
-
-impl<F: Func> Game<F> for Real<F> {
+impl<F: Func> Eval<F> for Real<F> {
     fn eval(&mut self, x: &F::Domain) -> F::Range {
         self.f.eval(&self.k, x)
     }
@@ -79,8 +76,7 @@ where
 {
     table: HashMap<F::Domain, F::Range>,
 }
-
-impl<F: Func> Game<F> for RandFunc<F>
+impl<F: Func> Eval<F> for RandFunc<F>
 where
     Standard: Distribution<F::Range>,
     F::Domain: Clone,
@@ -102,8 +98,7 @@ where
     table: HashMap<F::Domain, F::Range>,
     range: HashSet<F::Range>,
 }
-
-impl<F: Func> Game<F> for RandPerm<F>
+impl<F: Func> Eval<F> for RandPerm<F>
 where
     Standard: Distribution<F::Range>,
     F::Domain: Clone,
@@ -159,7 +154,7 @@ mod test {
     /// Test some basic properties we expect `F` to have.
     struct Tester<F>(F);
 
-    impl<G: Game<Aes128>> Distinguisher<G> for Tester<Aes128> {
+    impl<G: Eval<Aes128>> Distinguisher<G> for Tester<Aes128> {
         fn play(&self, mut game: G) -> bool {
             let x0 = [0; 16];
             let x1 = [1; 16];
@@ -257,7 +252,7 @@ pub mod lemma_prp_to_prf {
         range: HashSet<F::Range>,
     }
 
-    impl<F: Func> Game<F> for G2<F>
+    impl<F: Func> Eval<F> for G2<F>
     where
         Standard: Distribution<F::Range>,
         F::Domain: Clone,

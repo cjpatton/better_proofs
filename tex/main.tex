@@ -291,7 +291,102 @@ that a good pseudorandom permutation (PRP) is a good pseudorandom function
 %
 The proof demonstrates the \emph{equivalent-until-bad} transition.
 
-\cp{TODO.}
+\begin{figure}
+\begin{lstlisting}
+/// Syntax.
+pub trait Func {
+    type Key;
+    type Domain: std::hash::Hash + Eq + PartialEq + ?Sized;
+    type Range: Clone + std::hash::Hash + Eq + PartialEq;
+    fn eval(&self, k: &Self::Key, x: &Self::Domain) -> Self::Range;
+}
+
+/// Real game for defining PRP/PRF security.
+pub struct Real<F: Func> {
+    f: F,
+    k: F::Key,
+}
+impl<F: Func> Real<F>
+where
+    Standard: Distribution<F::Key>,
+{
+    pub fn with(f: F) -> Self {
+        Self {
+            f,
+            k: thread_rng().gen(),
+        }
+    }
+}
+impl<F: Func> Eval<F> for Real<F> {
+    fn eval(&mut self, x: &F::Domain) -> F::Range {
+        self.f.eval(&self.k, x)
+    }
+}
+\end{lstlisting}
+  \caption{Syntax and real security game for PRPs and PRFs.}
+  \label{fig/func/syntax}
+  \label{fig/func/real}
+\end{figure}
+
+
+
+
+\begin{figure}
+\begin{lstlisting}
+/// Ideal game for defining PRP security.
+#[derive(Default)]
+pub struct RandPerm<F: Func>
+where
+    F::Domain: Sized,
+{
+    table: HashMap<F::Domain, F::Range>,
+    range: HashSet<F::Range>,
+}
+impl<F: Func> Eval<F> for RandPerm<F>
+where
+    Standard: Distribution<F::Range>,
+    F::Domain: Clone,
+{
+    fn eval(&mut self, x: &F::Domain) -> F::Range {
+        let mut rng = thread_rng();
+        self.table
+            .entry(x.clone())
+            .or_insert(loop {
+                let y = rng.gen();
+                if !self.range.contains(&y) {
+                    self.range.insert(y.clone());
+                    break y;
+                }
+            })
+            .clone()
+    }
+}
+
+/// Ideal game for defining PRF security.
+#[derive(Default)]
+pub struct RandFunc<F: Func>
+where
+    F::Domain: Sized,
+{
+    table: HashMap<F::Domain, F::Range>,
+}
+impl<F: Func> Eval<F> for RandFunc<F>
+where
+    Standard: Distribution<F::Range>,
+    F::Domain: Clone,
+{
+    fn eval(&mut self, x: &F::Domain) -> F::Range {
+        self.table
+            .entry(x.clone())
+            .or_insert(thread_rng().gen())
+            .clone()
+    }
+}
+\end{lstlisting}
+  \caption{Ideal games for defining security of PRP and PRFs.}
+  \label{fig/func/ideal-prp}
+  \label{fig/func/ideal-prf}
+\end{figure}
 
 \bibliographystyle{plain} % We choose the "plain" reference style
 \bibliography{references}
@@ -342,7 +437,7 @@ game in Figure~\ref{fig/symenc/security}.
 % ../src/joy/hybrid/mod.rs
 \begin{figure}
 \begin{lstlisting}
-/// Syntax.
+// Syntax
 pub trait SymEnc {
     type Key;
     type Plaintext;
@@ -352,7 +447,7 @@ pub trait SymEnc {
     fn decrypt(&self, k: &Self::Key, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
 }
 
-/// Security.
+// Security
 pub struct Cpa<E: SymEnc> {
     e: E,
     k: E::Key,
@@ -387,6 +482,11 @@ impl<E: SymEnc> LeftOrRight for Cpa<E> {
 \label{sec/traits}.
 
 \begin{lstlisting}
+/// A generic distinguishing attacker.
+pub trait Distinguisher<G> {
+    fn play(&self, game: G) -> bool;
+}
+
 /// Left-or-right encryption oracle.
 pub trait LeftOrRight {
     type Plaintext;
@@ -404,12 +504,9 @@ pub trait GetPublicKey {
     fn get_pk(&self) -> &Self::PublicKey;
 }
 
-/// A generic distinguishing attacker.
-///
-/// The attacker gets as input a "game" and outputs a bit. The output is used
-/// to define a notion of advantage.
-pub trait Distinguisher<G> {
-    fn play(&self, game: G) -> bool;
+/// Oracle for evaluating a keyed function.
+pub trait Eval<F: Func> {
+    fn eval(&mut self, x: &F::Domain) -> F::Range;
 }
 \end{lstlisting}
 
