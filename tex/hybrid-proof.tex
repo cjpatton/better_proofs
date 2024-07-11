@@ -166,6 +166,9 @@ Let $R_{\code{12}}^A(\code{game}) =
 A\code{.play(FromHybridToPubEnc::init(game), sym_enc, false))}$.
 %
 We Have the following.
+%
+\cp{Here again is a step that we need to prove formally. Like the previous
+claim, our goal is to prove that two pieces of code are equivalent.}
 
 \begin{claim}[Equivalent-by-reduction]\label{claim/proof/hybrid/12}
   For all~$A$,
@@ -179,9 +182,6 @@ We Have the following.
     \Prob{R_{\code{12}}^A(\code{PubEnc::init(pub_enc, true)})} \,.
   \]
 \end{claim}
-%
-\cp{Here again is a step that we need to prove formally. Like the previous
-claim, our goal is to prove that two pieces of code are equivalent.}
 %
 Then by definition,
 %
@@ -289,6 +289,8 @@ Let $R_{\code{23}}^A(\code{game}) =
 A\code{.play(FromHybridToSymEnc::init(game), pub_enc))}$.
 %
 We Have the following.
+%
+\cp{Here again is a step that we need to prove formally.}
 
 \begin{claim}[Equivalent-by-reduction]
   For all~$A$,
@@ -302,8 +304,6 @@ We Have the following.
     \Prob{R_{\code{23}}^A(\code{Cpa::init(sym_enc, true)})} \,.
   \]
 \end{claim}
-%
-\cp{Here again is a step that we need to prove formally.}
 %
 Then by definition,
 %
@@ -332,7 +332,7 @@ Finally, we obtain $\code{G4}$ from $\code{G3}$ by applying the following patch:
      }
 \end{lstlisting}
 %
-In the new game, we encrypt the right temporary key instead of the left. Were
+In the new game, we encrypt the right temporary key instead of the left. Here
 again we bound the attacker's distinguishing advantage by reducing to CPA
 security of $\code{pub_enc}$.
 %
@@ -359,8 +359,6 @@ We Have the following.
 \cp{The proof is pretty much the same as for Claim~\ref{claim/proof/hybrid/12};
 the only difference is that the setting of the $\code{right}$ flag. In fact, we
 may be able to prove both claims at once.}
-%
-It follows by definition that
 %
 Then by definition,
 %

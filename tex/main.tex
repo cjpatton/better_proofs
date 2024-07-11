@@ -52,14 +52,145 @@
 \maketitle
 
 \begin{abstract}
-  \cp{TODO.}
+  \cp{TODO}
+
 \end{abstract}
 
 \section{Introduction}
 
-\cp{TODO.}
+\paragraph{Code-based game-playing proofs~\cite{BR06}.}
+%
+Game playing is a well-known paradigm for establishing computational security
+properties of cryptographic protocols.
+%
+In this paradigm, the security goal and execution environment are modeled as a
+\emph{game} played by the attacker.
+%
+A security proof relates the attacker's advantage in winning the game to the
+difficulty of one or more presumed hard problems.
 
-\section{Notation}
+Games are often expressed in \emph{code} rather than natural language, making
+it amendable to the following proof strategy.
+%
+The proof consists of a sequence of games, sometimes called \emph{hybrids}.
+Beginning with the real game, each game is obtained by modifying the code of
+the previous one. In the final game, typically the attacker interacts with some
+object that models the ideal interaction of uncorrupted parties.
+
+The prover's job is to establish, for each pair of neighboring games, that the
+probability of the attacker in distinguishing between the games is negligible.
+%
+Sometimes the rewrite results in a game that is semantically equivalent, in
+which case the attacker gets no advantage.
+%
+Some rewrites are fixed information theoretically, by enumerating the events
+that would result in distinguishable behavior and analyzing each event's
+probability.
+%
+Other rewrites must be established computationally, by reducing
+distinguishability to some computational assumption.
+
+In recent years, security proofs of this sort have played an increasingly
+central role in the design and analysis of protocols specified at IETF. In
+particular, we have seen working groups move from \emph{reacting} to knew
+attacks to \emph{proactively} seeking security analysis during the design
+phase~\cite{KT16}.
+%
+We have even seen this process formalized in the TLS working
+group~\cite{tls13-formal-analysis-triage-panel}.
+%
+Steps like this are significant, but the provable security methodology has some
+well-known limitations~\cite{Ber19}.
+%
+We consider one of them here.
+
+\paragraph{Our crisis of rigor.}
+%
+In their seminal paper on the subject from Eurocrypt 2006~\cite{BR06}, Bellare
+and Rogaway assessed that many proofs of the era were ``essentially
+unverifiable'', meaning errors in these proofs, some of which could result in
+attacks, may go unnoticed. They feared that provable security would
+reach a ``crisis of rigor'' in which proofs were believed without being fully
+vetted.
+%
+This fear has come to fruition, at least partially: several attacks have been
+documented that were missed due to a bug in the initial analysis.
+%
+\cp{TODO Add references for some of these.}
+%
+Bellare and Rogaway hoped that game playing would help reduce this risk.
+
+Today carefully checking computational security proofs of any type, including
+game-based proofs, remains a significant challenge. There seem to be at least three
+exacerbating factors:
+%
+\begin{enumerate}
+
+  \item Proofs are most often written in some \emph{pseudocode} language
+    intended for human readers. These are often called \emph{pen-and-paper}
+    proofs.
+    %
+    There is no ``standard'' pseudocode in use today: the syntax and semantics
+    are as varied as the communities that use them.
+    %
+    This can make life very difficulty for program committee members, who may
+    have a stack of 10 papers or more to review, each with its own unique and
+    in possibly compatible semantics.
+
+  \item Although pen-and-paper proofs are virtually impossible to check
+    mechanically (pseudocode typically has incomplete semantics), several
+    competing tools exist for developing mechanized proofs, such as
+    \href{https://bblanche.gitlabpages.inria.fr/CryptoVerif/}{CryptoVerif},
+    \href{https://github.com/EasyCrypt/easycrypt}{EasyCrypt}, and
+    \href{https://github.com/SSProve/ssprove}{SSProve}, but these tools remain
+    somewhat inaccessible to many folks writing pen-and-paper proofs today.
+    %
+    There are several reasons for this: maturity of the tooling; the
+    requirement to learn a domain specific language; or the tools being
+    tailored to specific (classes of) applications.
+    %
+    \cp{This seems like a controversial take: I would like to hear from others
+    on this point.}
+
+  \item Protocols of interest to practitioners at IETF and beyond are becoming
+    more complex.
+    %
+    First, we are seeing communities do more with cryptography, often going
+    beyond well-studied goals like key exchange, authentication, and
+    encryption.
+    %
+    Second, as attacks get more sophisticated, so must security definitions
+    model the execution environment in greater detail.
+    %
+    The net effect of these forces is that proofs are getting \emph{longer}.
+    This puts pressure on paper submitters, who usually need to respect a
+    strict page limit in order to get their paper accepted at a conference or
+    journal.
+    %
+    This forces them either to replace the full proof with a ``sketch'' or punt
+    it to the paper's appendix. Typically, program committee members are not
+    required to review.
+    %
+    Given this trajectory of applied cryptography research and the process for
+    reviewing it, something has to change in order to ensure proofs are
+    thoroughly vetted.
+
+\end{enumerate}
+
+\paragraph{Thesis.}
+%
+\cp{Mechanization is required; need a separation of concerns between subject
+matter experts and formal methods experts.}
+
+\paragraph{What this write up is about.}
+
+\paragraph{Scope.}
+%
+\cp{Another way to define and prove computational security properties is the
+simulation paradigm...}
+\cp{Talk about symbolic analysis.}
+
+\section{Conventions}
 
 All algorithms, including adversaries, are rust programs without async
 semantics (i.e., with the $\code{async}$ and $\code{await}$ key words removed).
@@ -72,8 +203,68 @@ that evaluates to $\code{bool}$.
 %
 We denote by $\Prob{\code{block}}$ the probability that execution of
 $\code{block}$ halts (without panicking) and outputs $\code{true}$.
+%
+We model
+\href{https://rust-random.github.io/rand/rand/fn.thread_rng.html}{$\code{thread_rng()}$}
+from the
+\href{https://rust-random.github.io/rand/rand/index.html}{$\code{rand}$} crate
+as an ideal source of uniform random coins.
 
 \section{Example: Hybrid Encryption}
+
+% ../src/joy/hybrid/mod.rs
+\begin{figure}[t]
+\begin{lstlisting}
+/// Syntax.
+pub trait PubEnc {
+    type PublicKey;
+    type SecretKey;
+    type Plaintext;
+    type Ciphertext;
+    fn key_gen(&self) -> (Self::PublicKey, Self::SecretKey);
+    fn encrypt(&self, pk: &Self::PublicKey, m: &Self::Plaintext) -> Self::Ciphertext;
+    fn decrypt(
+        &self,
+        sk: &Self::SecretKey,
+        c: &Self::Ciphertext,
+    ) -> Option<Self::Plaintext>;
+
+/// Security.
+pub struct PubCpa<E: PubEnc> {
+    enc: E,
+    pk: E::PublicKey,
+    right: bool,
+}
+impl<E: PubEnc> PubCpa<E> {
+    pub fn init(enc: E, right: bool) -> Self {
+        let (pk, _sk) = e.key_gen();
+        Self { enc, pk, right }
+    }
+}
+impl<E: PubEnc> GetPublicKey for PubCpa<E> {
+    type PublicKey = E::PublicKey;
+    fn get_pk(&self) -> &E::PublicKey {
+        &self.pk
+    }
+}
+impl<E: SymEnc> LeftOrRight for PubCpa<E> {
+    type Plaintext = E::Plaintext;
+    type Ciphertext = E::Ciphertext;
+    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
+        if self.right {
+            self.enc.encrypt(&self.k, m_right)
+        } else {
+            self.enc.encrypt(&self.k, m_left)
+        }
+    }
+}
+\end{lstlisting}
+  \caption{Syntax of public-key encryption (PKE) and game game
+  \lstinline{PubCpa} for defining security of PKE under chosen plaintext attack
+  (CPA).}
+  \label{fig/pubenc/security}
+  \label{fig/pubenc/syntax}
+\end{figure}
 
 In this section we consider the hybrid public-key encryption (PKE) scheme of
 \cite[Chapter~15]{joy}.
@@ -137,72 +328,7 @@ initialize the game.
   function of the length of the plaintext.
 \end{remark}
 
-% ../src/joy/hybrid/mod.rs
-\begin{figure}
-\begin{lstlisting}
-/// Syntax.
-pub trait PubEnc {
-    type PublicKey;
-    type SecretKey;
-    type Plaintext;
-    type Ciphertext;
-    fn key_gen(&self) -> (Self::PublicKey, Self::SecretKey);
-    fn encrypt(&self, pk: &Self::PublicKey, m: &Self::Plaintext) -> Self::Ciphertext;
-    fn decrypt(
-        &self,
-        sk: &Self::SecretKey,
-        c: &Self::Ciphertext,
-    ) -> Option<Self::Plaintext>;
-
-/// Security.
-pub struct PubCpa<E: PubEnc> {
-    enc: E,
-    pk: E::PublicKey,
-    right: bool,
-}
-impl<E: PubEnc> PubCpa<E> {
-    pub fn init(enc: E, right: bool) -> Self {
-        let (pk, _sk) = e.key_gen();
-        Self { enc, pk, right }
-    }
-}
-impl<E: PubEnc> GetPublicKey for PubCpa<E> {
-    type PublicKey = E::PublicKey;
-    fn get_pk(&self) -> &E::PublicKey {
-        &self.pk
-    }
-}
-impl<E: SymEnc> LeftOrRight for PubCpa<E> {
-    type Plaintext = E::Plaintext;
-    type Ciphertext = E::Ciphertext;
-    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
-        if self.right {
-            self.enc.encrypt(&self.k, m_right)
-        } else {
-            self.enc.encrypt(&self.k, m_left)
-        }
-    }
-}
-\end{lstlisting}
-  \caption{Syntax of public-key encryption (PKE) and game game
-  \lstinline{PubCpa} for defining security of PKE under chosen plaintext attack
-  (CPA).}
-  \label{fig/pubenc/security}
-  \label{fig/pubenc/syntax}
-\end{figure}
-
 \subsection{Construction}
-
-In practice, PKE schemes are constructed by combining symmetric encryption with
-a mechanism for encapsulating the encryption key to the intended
-recipient~\cite{rfc9180} (that is, the holder of the secret key corresponding
-to the public encapsulation key).
-%
-By way of gentle introduction to this paradigm, Mike Rosulek gives a
-construction of CPA-secure, hybrid encryption in ``The Joy of
-Cryptography''~\cite{joy}.
-%
-We recall this construction in Figure~\ref{fig/hybrid}.
 
 \begin{figure}[t]
 \begin{lstlisting}
@@ -243,6 +369,18 @@ where
   \caption{Hybrid PKE scheme of \cite[Construction 15.8]{joy}.}
   \label{fig/hybrid}
 \end{figure}
+
+
+In practice, PKE schemes are constructed by combining symmetric encryption with
+a mechanism for encapsulating the encryption key to the intended
+recipient~\cite{rfc9180} (that is, the holder of the secret key corresponding
+to the public encapsulation key).
+%
+By way of gentle introduction to this paradigm, Mike Rosulek gives a
+construction of CPA-secure, hybrid encryption in ``The Joy of
+Cryptography''~\cite{joy}.
+%
+We recall this construction in Figure~\ref{fig/hybrid}.
 
 This construction transforms a symmetric encryption scheme $\code{sym_enc: S}$
 into a PKE scheme.
@@ -286,7 +424,7 @@ ciphertexts.
 
 \section{Example: The PRP/PRF Switching Lemma}
 
-In this section we fix the PRP/PRF switching lemma~\cite{br06}, which states
+In this section we fix the PRP/PRF switching lemma~\cite{BR06}, which states
 that a good pseudorandom permutation (PRP) is a good pseudorandom function
 (PRF) up to birthday attacks.
 %
@@ -376,7 +514,7 @@ let~$A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$} for
   advantage.
 \end{definition}
 
-\begin{lemma}[{\cite[Lemma 1]{br06}}]
+\begin{lemma}[{\cite[Lemma 1]{BR06}}]
   Suppose $A$ makes at most $q$ queries to its oracle. Then
   %
   \[

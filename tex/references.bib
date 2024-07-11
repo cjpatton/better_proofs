@@ -1,4 +1,13 @@
-@misc{br06,
+@misc{Ber19,
+      author = {Daniel J.  Bernstein},
+      title = {Comparing proofs of security for lattice-based encryption},
+      howpublished = {Cryptology ePrint Archive, Paper 2019/691},
+      year = {2019},
+      note = {\url{https://eprint.iacr.org/2019/691}},
+      url = {https://eprint.iacr.org/2019/691}
+}
+
+@misc{BR06,
       author = {Mihir Bellare and Phillip Rogaway},
       title = {Code-Based Game-Playing Proofs and the Security of Triple Encryption},
       howpublished = {Cryptology ePrint Archive, Paper 2004/331},
@@ -14,6 +23,22 @@
     url          = "https://joyofcryptography.com"
 }
 
+@InProceedings{KT16,
+author="Paterson, Kenneth G.
+and van der Merwe, Thyla",
+editor="Chen, Lidong
+and McGrew, David
+and Mitchell, Chris",
+title="Reactive and Proactive Standardisation of TLS",
+booktitle="Security Standardisation Research",
+year="2016",
+publisher="Springer International Publishing",
+address="Cham",
+pages="160--186",
+abstract="In the development of TLS 1.3, the IETF TLS Working Group has adopted an ``analysis-prior-to-deployment'' design philosophy. This is in sharp contrast to all previous versions of the protocol. We present an account of the TLS standardisation narrative, examining the differences between the reactive standardisation process for TLS 1.2 and below, and the more proactive standardisation process for TLS 1.3. We explore the possible factors that have contributed to the shift in the TLS WG's design mindset, considering the protocol analysis tools available, the levels of academic involvement and the incentives governing relevant stakeholders at the time of standardisation. In an attempt to place TLS within the broader realm of standardisation, we perform a comparative analysis of standardisation models and discuss the standardisation of TLS within this context.",
+isbn="978-3-319-49100-4"
+}
+
 @misc{rfc9180,
     series =    {Request for Comments},
     number =    9180,
@@ -27,4 +52,11 @@
     year =      2022,
     month =     feb,
     abstract =  {This document describes a scheme for hybrid public key encryption (HPKE). This scheme provides a variant of public key encryption of arbitrary-sized plaintexts for a recipient public key. It also includes three authenticated variants, including one that authenticates possession of a pre-shared key and two optional ones that authenticate possession of a key encapsulation mechanism (KEM) private key. HPKE works for any combination of an asymmetric KEM, key derivation function (KDF), and authenticated encryption with additional data (AEAD) encryption function. Some authenticated variants may not be supported by all KEMs. We provide instantiations of the scheme using widely used and efficient primitives, such as Elliptic Curve Diffie-Hellman (ECDH) key agreement, HMAC-based key derivation function (HKDF), and SHA2. This document is a product of the Crypto Forum Research Group (CFRG) in the IRTF.},
+}
+
+@misc{tls13-formal-analysis-triage-panel,
+    title= {Kicking off the {TLS 1.3} formal analysis triage panel},
+    author = {Deirdre Connolly},
+    howpublished =  {{TLS} mailing list discussion: \url{https://mailarchive.ietf.org/arch/msg/tls/FhhICSR3qlLHjFcf1cA7Iry11CA/}},
+    year = 2024,
 }
