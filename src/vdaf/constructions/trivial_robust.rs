@@ -154,7 +154,7 @@ pub mod theorem_robust {
         }
 
         impl<G: Game<TrivialRobust>> Distinguisher<G> for Tester<TrivialRobust> {
-            fn play(&self, game: G) -> Result<bool, Error> {
+            fn play(&self, game: G) -> bool {
                 struct TestCase {
                     measurement: u64,
                     expected_out: Option<Vec<Field64>>,
@@ -178,14 +178,16 @@ pub mod theorem_robust {
                 .enumerate()
                 {
                     let (public_share, input_shares) = self.vdaf.shard(&t.measurement, &(), &());
-                    let tx = game.prep(&(), &(), &public_share, &input_shares)?;
+                    let tx = game
+                        .prep(&(), &(), &public_share, &input_shares)
+                        .expect("prep() failed");
                     if tx.out != t.expected_out {
                         println!("test case {i}: got {:?}; want {:?}", tx.out, t.expected_out);
-                        return Ok(false);
+                        return false;
                     }
                 }
 
-                Ok(true)
+                true
             }
         }
 
@@ -193,7 +195,7 @@ pub mod theorem_robust {
         fn real() {
             let adv = Tester::with(TrivialRobust);
             let vdaf = TrivialRobust;
-            assert_eq!(adv.play(Real::with(vdaf)), Ok(true));
+            assert_eq!(adv.play(Real::with(vdaf)), true);
         }
 
         #[test]
@@ -201,7 +203,7 @@ pub mod theorem_robust {
             let adv = Tester::with(TrivialRobust);
             let ext = TrivialRobustExtractor;
             let vdaf = TrivialRobust;
-            assert_eq!(adv.play(Ideal::with(vdaf, ext)), Ok(true));
+            assert_eq!(adv.play(Ideal::with(vdaf, ext)), true);
         }
     }
 }

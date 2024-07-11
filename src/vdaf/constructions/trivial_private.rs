@@ -195,14 +195,14 @@ pub mod theorem_private {
         fn real() {
             let adv = test_utils::Tester::with(TrivialPrivate);
             let vdaf = TrivialPrivate;
-            assert_eq!(adv.play(Real::with(vdaf)), Ok(true));
+            assert_eq!(adv.play(Real::with(vdaf)), true);
         }
 
         #[test]
         fn ideal() {
             let adv = test_utils::Tester::with(TrivialPrivate);
             let sim = TrivialPrivateSimulator::default();
-            assert_eq!(adv.play(Ideal::with(sim)), Ok(true));
+            assert_eq!(adv.play(Ideal::with(sim)), true);
         }
     }
 }

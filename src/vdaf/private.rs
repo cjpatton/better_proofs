@@ -434,40 +434,45 @@ pub mod test_utils {
         F: FieldElementWithInteger<Integer = u64>,
         Standard: Distribution<V::VerifyKey>,
     {
-        fn play(&self, mut game: G) -> Result<bool, Error> {
+        fn play(&self, mut game: G) -> bool {
             let batch_size = 10;
             let test_measurement = 1;
             let vk = thread_rng().gen();
 
             // Corrupt the leader.
-            game.init(&vk, AggregatorId::Leader)?;
+            game.init(&vk, AggregatorId::Leader).expect("init() failed");
 
             // Aggregate a few reports.
             let mut out_shares_0 = Vec::new();
             for i in 0..batch_size {
                 // Sharding
-                let report_share_0 = game.shard(i, &test_measurement)?;
+                let report_share_0 = game.shard(i, &test_measurement).expect("shard() failed");
 
                 // Preparation
                 let (prep_state, prep_share_0) =
                     self.vdaf
                         .prep_init(&vk, AggregatorId::Leader, &(), &report_share_0);
-                let prep_share_1 = game.prep_init(i, &())?;
+                let prep_share_1 = game.prep_init(i, &()).expect("prep_init() failed");
                 let prep_shares = [prep_share_0, prep_share_1];
-                game.prep_finish(i, &(), &prep_shares)?;
+                game.prep_finish(i, &(), &prep_shares)
+                    .expect("prep_finish() failed");
 
-                out_shares_0.push(self.vdaf.prep_finish(prep_state, &prep_shares)?);
+                out_shares_0.push(
+                    self.vdaf
+                        .prep_finish(prep_state, &prep_shares)
+                        .expect("local prep_finish() failed"),
+                );
             }
 
             let agg_share_0 = out_shares_0
                 .into_iter()
                 .reduce(|agg, out| vec_add(agg, out))
                 .unwrap();
-            let agg_share_1 = game.agg(&())?;
+            let agg_share_1 = game.agg(&()).expect("agg() failed");
             if agg_share_1.len() != agg_share_0.len() {
                 // In the real world, the aggregate share will have the correct length. If it
                 // doesn't, then guess we're in the ideal world.
-                return Ok(false);
+                return false;
             }
 
             let agg_result = self
@@ -477,11 +482,11 @@ pub mod test_utils {
             if agg_result != test_measurement * batch_size as u64 {
                 // In the real world, the honest aggregator will compute a share of 0. If it does
                 // not, then guess we're in the ideal world.
-                return Ok(false);
+                return false;
             }
 
             // Always guess that we're in the real world.
-            Ok(true)
+            true
         }
     }
 }

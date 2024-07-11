@@ -65,13 +65,11 @@ semantics (i.e., with the $\code{async}$ and $\code{await}$ key words removed).
 By convention, an adversary's runtime includes the time it takes to initialize
 its game and evaluate its oracle queries.
 %
-Define type $\code{Error}$ to be $\code{&'static str}$.
-%
 Let $\code{block}$ be a rust code block whose last statement is an expression
-that evaluates to $\code{Result<bool, Error>}$.
+that evaluates to $\code{bool}$.
 %
 We denote by $\Prob{\code{block}}$ the probability that execution of
-$\code{block}$ halts (without panicking) and outputs $\code{Ok(true)}$.
+$\code{block}$ halts (without panicking) and outputs $\code{true}$.
 
 \section{Example: Hybrid Encryption}
 
@@ -411,7 +409,7 @@ pub trait GetPublicKey {
 /// The attacker gets as input a "game" and outputs a bit. The output is used
 /// to define a notion of advantage.
 pub trait Distinguisher<G> {
-    fn play(&self, game: G) -> Result<bool, Error>;
+    fn play(&self, game: G) -> bool;
 }
 \end{lstlisting}
 

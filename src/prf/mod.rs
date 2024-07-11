@@ -6,7 +6,7 @@
 //! advantage of `adv` in distinguishing `f` from a random function as
 //!
 //! ```text
-//! Pr[adv.play(Real::with(f)), Ok(true)] - Pr[adv.play(RandFunc::default()), Ok(true)]
+//! Pr[adv.play(Real::with(f)), true] - Pr[adv.play(RandFunc::default()), true]
 //! ```
 //!
 //! Informally, we call `f` a pseudorandom function, or PRF, if every efficient attacker's
@@ -18,7 +18,7 @@
 //! advantage of `adv` in distinguishing `f` from a random function as
 //!
 //! ```text
-//! Pr[adv.play(Real::with(f)), Ok(true)] - Pr[adv.play(RandPerm::default()), Ok(true)]
+//! Pr[adv.play(Real::with(f)), true] - Pr[adv.play(RandPerm::default()), true]
 //! ```
 //!
 //! Informally, we call `f` a pseudorandom permutation, or PRP, if every efficient attacker's
@@ -154,46 +154,46 @@ impl Perm for Aes128 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Distinguisher, Error};
+    use crate::Distinguisher;
 
     /// Test some basic properties we expect `F` to have.
     struct Tester<F>(F);
 
     impl<G: Game<Aes128>> Distinguisher<G> for Tester<Aes128> {
-        fn play(&self, mut game: G) -> Result<bool, Error> {
+        fn play(&self, mut game: G) -> bool {
             let x0 = [0; 16];
             let x1 = [1; 16];
             let y0 = game.eval(&x0);
             let y1 = game.eval(&x1);
             if y0 == y1 {
-                return Ok(false);
+                return false;
             }
             if y0 != game.eval(&x0) {
-                return Ok(false);
+                return false;
             }
             if y1 != game.eval(&x1) {
-                return Ok(false);
+                return false;
             }
-            Ok(true)
+            true
         }
     }
 
     #[test]
     fn aes_real() {
         let adv = Tester(Aes128);
-        assert_eq!(adv.play(Real::with(Aes128)), Ok(true));
+        assert_eq!(adv.play(Real::with(Aes128)), true);
     }
 
     #[test]
     fn aes_rand_func() {
         let adv = Tester(Aes128);
-        assert_eq!(adv.play(RandFunc::default()), Ok(true));
+        assert_eq!(adv.play(RandFunc::default()), true);
     }
 
     #[test]
     fn aes_rand_perm() {
         let adv = Tester(Aes128);
-        assert_eq!(adv.play(RandPerm::default()), Ok(true));
+        assert_eq!(adv.play(RandPerm::default()), true);
     }
 
     #[test]
@@ -224,14 +224,14 @@ pub mod lemma_prp_to_prf {
     /// Game `G0`: exactly the [`Real`] game with `f`. Let
     ///
     /// ```text
-    /// p0 = Pr[a.play(G0::with(f)) = Ok(true)]
+    /// p0 = Pr[a.play(G0::with(f)) = true]
     /// ```
     pub type G0<F> = Real<F>;
 
     /// Game `G1`: exactly the [`RandPerm`] game with `f`. Let
     ///
     /// ```text
-    /// p1 = Pr[a.play(G1::default()) = Ok(true)]
+    /// p1 = Pr[a.play(G1::default()) = true]
     /// ```
     ///
     /// REDUCTION `b`: Run `a`.
@@ -244,7 +244,7 @@ pub mod lemma_prp_to_prf {
     /// Let
     ///
     /// ```text
-    /// p2 = Pr[a.play(G2::default()) = Ok(true)]
+    /// p2 = Pr[a.play(G2::default()) = true]
     /// ```
     ///
     /// `G1` and `G2` are EQUIVALENT, thus `p1 - p2 == 0`.
@@ -288,7 +288,7 @@ pub mod lemma_prp_to_prf {
     /// Let
     ///
     /// ```text
-    /// p3 = Pr[a.play(G3::default()) = Ok(true)]
+    /// p3 = Pr[a.play(G3::default()) = true]
     /// ```
     ///
     /// `G3` and `G2` are IDENTICAL UNTIL the game samples a point in the range of `f` twice.
