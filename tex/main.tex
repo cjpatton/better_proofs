@@ -43,7 +43,7 @@
 \newcommand{\code}[1]{\textrm{\textup{\lstinline{#1}}}}
 
 \title{Better proofs}
-\author{Christopher Patton (chrispatton+ietf@gmail.com)}
+\author{Christopher Patton ({\texttt{\small chrispatton+ietf@gmail.com}})}
 
 \begin{document}
 
@@ -68,7 +68,7 @@ its game and evaluate its oracle queries.
 Define type $\code{Error}$ to be $\code{&'static str}$.
 %
 Let $\code{block}$ be a rust code block whose last statement is an expression
-that evaluates to a $\code{Result<bool, Error>}$.
+that evaluates to $\code{Result<bool, Error>}$.
 %
 We denote by $\Prob{\code{block}}$ the probability that execution of
 $\code{block}$ halts (without panicking) and outputs $\code{Ok(true)}$.
@@ -221,18 +221,15 @@ where
     type SecretKey = P::SecretKey;
     type Plaintext = S::Plaintext;
     type Ciphertext = (P::Ciphertext, S::Ciphertext);
-
     fn key_gen(&self) -> (P::PublicKey, P::SecretKey) {
         self.pub_enc.key_gen()
     }
-
     fn encrypt(&self, pk: &P::PublicKey, m: &S::Plaintext) -> (P::Ciphertext, S::Ciphertext) {
         let tk = thread_rng().gen(); // "temporary key"
         let c_pub = self.pub_enc.encrypt(pk, &tk);
         let c_sym = self.sym_enc.encrypt(&tk, m);
         (c_pub, c_sym)
     }
-
     fn decrypt(
         &self,
         sk: &Self::SecretKey,

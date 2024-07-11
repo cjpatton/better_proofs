@@ -175,18 +175,15 @@ where
     type SecretKey = P::SecretKey;
     type Plaintext = S::Plaintext;
     type Ciphertext = (P::Ciphertext, S::Ciphertext);
-
     fn key_gen(&self) -> (P::PublicKey, P::SecretKey) {
         self.pub_enc.key_gen()
     }
-
     fn encrypt(&self, pk: &P::PublicKey, m: &S::Plaintext) -> (P::Ciphertext, S::Ciphertext) {
         let tk = thread_rng().gen(); // "temporary key"
         let c_pub = self.pub_enc.encrypt(pk, &tk);
         let c_sym = self.sym_enc.encrypt(&tk, m);
         (c_pub, c_sym)
     }
-
     fn decrypt(
         &self,
         sk: &Self::SecretKey,
