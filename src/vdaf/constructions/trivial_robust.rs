@@ -154,7 +154,7 @@ pub mod theorem_robust {
         }
 
         impl<G: Game<TrivialRobust>> Distinguisher<G> for Tester<TrivialRobust> {
-            fn play(&self, game: G) -> bool {
+            fn play_then_return(&self, game: G) -> (G, bool) {
                 struct TestCase {
                     measurement: u64,
                     expected_out: Option<Vec<Field64>>,
@@ -183,11 +183,11 @@ pub mod theorem_robust {
                         .expect("prep() failed");
                     if tx.out != t.expected_out {
                         println!("test case {i}: got {:?}; want {:?}", tx.out, t.expected_out);
-                        return false;
+                        return (game, false);
                     }
                 }
 
-                true
+                (game, true)
             }
         }
 

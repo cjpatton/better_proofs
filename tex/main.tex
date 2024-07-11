@@ -21,6 +21,7 @@
 
 \newtheorem{claim}{Claim}
 \newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
 \newtheorem{theorem}{Theorem}
 \newtheorem{remark}{Remark}
 
@@ -38,6 +39,7 @@
 }
 \newcommand{\cp}[1]{\authnote{darkgreen}{Chris P.}{#1}}
 
+\newcommand{\bad}{\mathit{bad}}
 \newcommand{\Adv}[1]{\textrm{\textup{Adv}}^{\textup{#1}}}
 \newcommand{\Prob}[1]{\Pr\hspace{-1pt}\big[\,#1\,\big]}
 \newcommand{\code}[1]{\textrm{\textup{\lstinline{#1}}}}
@@ -170,7 +172,7 @@ impl<E: PubEnc> GetPublicKey for PubCpa<E> {
         &self.pk
     }
 }
-impl<E: SymEnc> LeftOrRight for Cpa<E> {
+impl<E: SymEnc> LeftOrRight for PubCpa<E> {
     type Plaintext = E::Plaintext;
     type Ciphertext = E::Ciphertext;
     fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
@@ -295,7 +297,16 @@ Figure~\ref{fig/func/syntax}.\footnote{A PRP also implements the inverse of
 $\code{Eval::eval()}$. We do not list this syntax because it is not needed
 here.}
 %
-
+For example, the AES-128 blockipher would set $\code{Key}$, $\code{Domain}$,
+and $\code{Range}$ to $\code{[u8; 16]}$.
+%
+Security is defined by the $\code{Real}$ game in Figure~\ref{fig/func/real},
+which gives the attacker an oracle for the function with a randomly sampled
+key. In the ideal PRP and PRF games, the oracle lazy evaluates, respectively, a
+random permutation and a random function over the same domain and range.
+%
+The ideal games, denoted $\code{RandPerm}$ and $\code{RandFunc}$, are listed
+for completeness in Appendix~\ref{sec/func/ideal}.
 
 \begin{figure}
 \begin{lstlisting}
@@ -307,7 +318,7 @@ pub trait Func {
     fn eval(&self, k: &Self::Key, x: &Self::Domain) -> Self::Range;
 }
 
-/// Real game for defining PRP/PRF security.
+/// Real game for defining PRP and PRF security.
 pub struct Real<F: Func> {
     f: F,
     k: F::Key,
@@ -333,9 +344,50 @@ impl<F: Func> Eval<F> for Real<F> {
   \label{fig/func/real}
 \end{figure}
 
+Let $\code{f: F}$ implement \hyperref[fig/func/syntax]{$\code{Func}$} and
+let~$A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$} for
+\hyperref[sec/traits]{$\code{Eval<F>}$}.
 
+\begin{definition}[PRP]
+  Define the advantage of~$A$ in distinguishing $\code{f}$ from a random
+  permutation as
+  %
+  \[
+    \Adv{prp}_\code{f}(A) =
+      \Prob{A\code{.play(Real::with(f))}} -
+      \Prob{A\code{.play(RandPerm::default())}} \,.
+  \]
+  %
+  Informally, we say $\code{f}$ is a PRP if every efficient attacker gets small
+  advantage.
+\end{definition}
 
+\begin{definition}[PRF]
+  Define the advantage of~$A$ in distinguishing $\code{f}$ from a random
+  function as
+  %
+  \[
+    \Adv{prf}_\code{f}(A) =
+      \Prob{A\code{.play(Real::with(f))}} -
+      \Prob{A\code{.play(RandFunc::default())}} \,.
+  \]
+  %
+  Informally, we say $\code{f}$ is a PRF if every efficient attacker gets small
+  advantage.
+\end{definition}
 
+\begin{lemma}[{\cite[Lemma 1]{br06}}]
+  Suppose $A$ makes at most $q$ queries to its oracle. Then
+  %
+  \[
+    \Adv{prp}_\code{f}(A) \leq
+      \Adv{prf}_\code{f}(A) +
+      \frac{q(q-1)}{2|\code{F::Range}|} \,.
+  \]
+\end{lemma}
+\begin{proof}
+  \input{switching-proof}
+\end{proof}
 
 \bibliographystyle{plain} % We choose the "plain" reference style
 \bibliography{references}
@@ -386,7 +438,7 @@ game in Figure~\ref{fig/symenc/security}.
 % ../src/joy/hybrid/mod.rs
 \begin{figure}
 \begin{lstlisting}
-// Syntax
+/// Syntax.
 pub trait SymEnc {
     type Key;
     type Plaintext;
@@ -396,7 +448,7 @@ pub trait SymEnc {
     fn decrypt(&self, k: &Self::Key, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
 }
 
-// Security
+/// Security.
 pub struct Cpa<E: SymEnc> {
     e: E,
     k: E::Key,
@@ -490,7 +542,10 @@ where
 \begin{lstlisting}
 /// A generic distinguishing attacker.
 pub trait Distinguisher<G> {
-    fn play(&self, game: G) -> bool;
+    fn play_then_return(&self, game: G) -> (G, bool);
+    fn play(&self, game: G) -> bool {
+        self.play_then_return(game).1
+    }
 }
 
 /// Left-or-right encryption oracle.

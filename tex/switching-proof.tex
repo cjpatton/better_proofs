@@ -1,0 +1,131 @@
+We first observe that
+%
+% adv(prp) = pr(real) - pr(func)
+%          = pr(real) - pr(perm) + pr(func) - pr(func)
+%          = pr(real) - pr(func) + pr(func) - pr(perm)
+%          = adv(prf) + pr(func) - pr(perm)
+\[
+  \Adv{prp}_\code{f}(A) =
+      \Adv{prf}_\code{f}(A) +
+      \Prob{A\code{.play(RandFunc::default())}} -
+      \Prob{A\code{.play(RandPerm::default())}} \,.
+\]
+%
+We consider the difference $\Prob{A\code{.play(RandFunc::default())}} -
+\Prob{A\code{.play(RandPerm::default())}}$ in the remainder.
+
+Consider the following game:
+%
+\begin{lstlisting}
+#[derive(Default)]
+pub struct G1<F: Func>
+where
+    F::Domain: Sized,
+{
+    table: HashMap<F::Domain, F::Range>,
+    range: HashSet<F::Range>,
+    bad: bool,
+}
+impl<F: Func> Eval<F> for G1<F>
+where
+    Standard: Distribution<F::Range>,
+    F::Domain: Clone + std::hash::Hash + Eq,
+    F::Range: Clone + std::hash::Hash + Eq,
+{
+    fn eval(&mut self, x: &F::Domain) -> F::Range {
+        let mut rng = thread_rng();
+        self.table
+            .entry(x.clone())
+            .or_insert(loop {
+                let y = rng.gen();
+                if self.range.contains(&y) {
+                    self.bad = true;
+                }
+                self.range.insert(y.clone());
+                break y;
+            })
+            .clone()
+    }
+}
+\end{lstlisting}
+%
+This game was obtained from \hyperref[sec/func/ideal]{$\code{RandFunc}$} by
+modifying the closure passed to $\code{.or_insert()}$. The new code samples the
+range value as usual, but does some extra book-keeping that sets us up for the
+next step. In particular, the sampled point, denoted $\code{y}$, is stored in a
+set $\code{range}$: if ever $\code{y}$ is already in $\code{range}$, then the
+game sets a flag called $\code{bad}$, but otherwise proceeds as usual.
+
+\begin{claim}[Equivalent-rewrite]
+  For all $A$,
+  \[
+     \Prob{A\code{.play(RandFunc::default())}} =
+     \Prob{A\code{.play(G1::default())}} \,.
+  \]
+\end{claim}
+%
+\cp{To be proven.}
+
+Next, game $\code{G2}$ is obtained from $\code{G2}$ by applying the following patch:
+%
+\begin{lstlisting}[style=patch]
+    fn eval(&mut self, x: &F::Domain) -> F::Range {
+        let mut rng = thread_rng();
+        self.table
+            .entry(x.clone())
+            .or_insert(loop {
+                 let y = rng.gen();
+                 if self.range.contains(&y) {
+                     self.bad = true;
++                    continue; // reject and try again
+                 }
+                 self.range.insert(y.clone());
+                 break y;
+            })
+            .clone()
+    }
+\end{lstlisting}
+%
+This modifies the code after $\code{bad}$ gets set. In the new game, if there
+is a collision in the range, then~$\code{y}$ is rejected and we try again.
+%
+Let $\bad = A\code{.play_then_return(G2::default()).bad}$.
+%
+\begin{claim}[Equivalent-until-bad]
+  For all $A$,
+  \[
+     \Prob{A\code{.play(G1::default())}} -
+     \Prob{A\code{.play(G2::default())}} \leq \Prob{\bad} \,.
+  \]
+\end{claim}
+%
+\cp{To be proven.}
+
+Finally, game $\code{G2}$ is equivalent to
+\hyperref[sec/func/ideal]{$\code{RandPerm}$}. Namely, the latter is obtained
+from the former by negating the condition and re-arranging the code.
+%
+\begin{claim}[Equivalent-rewrite]
+  For all $A$,
+  \[
+     \Prob{A\code{.play(G2::default())}} =
+     \Prob{A\code{.play(RandPerm::default())}} \,.
+  \]
+\end{claim}
+%
+\cp{To be proven.}
+
+To obtain the final bound, observe that the $\bad$ event occurs if, at any
+point in the game's execution, it holds that $\code{y}$ is contained in
+$\code{range}$.
+%
+This can occur on any \hyperref[sec/traits]{$\code{Eval}$} query, of which
+there at at most~$q$.
+%
+Since each range point is sampled uniform randomly, we have that
+%
+\[
+  \Prob{\bad} \leq
+    \binom{q}{2} \cdot \frac{1}{|\code{F::Range}|} =
+    \frac{q(q-1)}{2|\code{F::Range}|} \,.
+\]

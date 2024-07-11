@@ -155,21 +155,21 @@ mod test {
     struct Tester<F>(F);
 
     impl<G: Eval<Aes128>> Distinguisher<G> for Tester<Aes128> {
-        fn play(&self, mut game: G) -> bool {
+        fn play_then_return(&self, mut game: G) -> (G, bool) {
             let x0 = [0; 16];
             let x1 = [1; 16];
             let y0 = game.eval(&x0);
             let y1 = game.eval(&x1);
             if y0 == y1 {
-                return false;
+                return (game, false);
             }
             if y0 != game.eval(&x0) {
-                return false;
+                return (game, false);
             }
             if y1 != game.eval(&x1) {
-                return false;
+                return (game, false);
             }
-            true
+            (game, true)
         }
     }
 
@@ -200,98 +200,4 @@ mod test {
     }
 }
 
-pub mod lemma_prp_to_prf {
-
-    //! PRP/PRF switching [[BR06]]: If `f` is a PRP, then `f` is a PRF (up to birthday attacks).
-    //!
-    //! Formally, for every PRF attacker `a`, there exists a PRP attacker `b` such that
-    //!
-    //! ```text
-    //! AdvPRF(a, f) <= AdvPRP(b, f) + q(q-1)/(2*|F::Range|)
-    //! ```
-    //!
-    //! where `a` queries its oracle at most `q` times and `b` has the same runtime as `a`.
-    //!
-    //! [BR06]: https://eprint.iacr.org/2004/331
-
-    use super::*;
-
-    /// Game `G0`: exactly the [`Real`] game with `f`. Let
-    ///
-    /// ```text
-    /// p0 = Pr[a.play(G0::with(f)) = true]
-    /// ```
-    pub type G0<F> = Real<F>;
-
-    /// Game `G1`: exactly the [`RandPerm`] game with `f`. Let
-    ///
-    /// ```text
-    /// p1 = Pr[a.play(G1::default()) = true]
-    /// ```
-    ///
-    /// REDUCTION `b`: Run `a`.
-    ///
-    /// Then `p0 - p1` is exactly `b`'s [PRP](crate::prf) distinguishing advantage against `f`.
-    pub type G1<F> = RandPerm<F>;
-
-    /// Game `G2`: derived from `G1` by rewriting the rejection sampling loop.
-    ///
-    /// Let
-    ///
-    /// ```text
-    /// p2 = Pr[a.play(G2::default()) = true]
-    /// ```
-    ///
-    /// `G1` and `G2` are EQUIVALENT, thus `p1 - p2 == 0`.
-    #[derive(Default)]
-    pub struct G2<F: Func>
-    where
-        F::Domain: Sized,
-    {
-        table: HashMap<F::Domain, F::Range>,
-        range: HashSet<F::Range>,
-    }
-
-    impl<F: Func> Eval<F> for G2<F>
-    where
-        Standard: Distribution<F::Range>,
-        F::Domain: Clone + std::hash::Hash + Eq,
-        F::Range: Clone + std::hash::Hash + Eq,
-    {
-        #[allow(clippy::never_loop)]
-        fn eval(&mut self, x: &F::Domain) -> F::Range {
-            let mut rng = thread_rng();
-            self.table
-                .entry(x.clone())
-                .or_insert(loop {
-                    let y = rng.gen();
-                    // TODO(cjpatton) Figure out a nice way to express the "identical-until" code
-                    // path as an attribute. The goal would be to signal the hax backend to
-                    // conditionally compile the code covered by the attribute.
-                    #[cfg(feature = "identical-until")]
-                    if self.range.contains(&y) {
-                        continue;
-                    }
-                    self.range.insert(y.clone());
-                    break y;
-                })
-                .clone()
-        }
-    }
-
-    /// Game `G3`: derived from `G2` by removing the rejection sampling logic.
-    ///
-    /// Let
-    ///
-    /// ```text
-    /// p3 = Pr[a.play(G3::default()) = true]
-    /// ```
-    ///
-    /// `G3` and `G2` are IDENTICAL UNTIL the game samples a point in the range of `f` twice.
-    /// Afeter `q` queries, this probability is `q(q-1)/(2*|F::Range|)`, thus `p2 - p3 <=
-    /// q(q-1)/(2*|F::Range|)`.
-    ///
-    ///
-    /// `G3` is EQUIVALENT to the [`RandFunc`] game with `f`.
-    pub type G3<F> = RandFunc<F>;
-}
+pub mod switching;

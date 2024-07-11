@@ -16,11 +16,11 @@ pub fn vec_add<F: AddAssign>(mut u: Vec<F>, v: Vec<F>) -> Vec<F> {
 }
 
 /// A generic distinguishing attacker.
-///
-/// The attacker gets as input a "game" and outputs a bit. The output is used to define a
-/// notion of advantage, e.g., for [PRFs](crate::prf).
 pub trait Distinguisher<G> {
-    fn play(&self, game: G) -> bool;
+    fn play_then_return(&self, game: G) -> (G, bool);
+    fn play(&self, game: G) -> bool {
+        self.play_then_return(game).1
+    }
 }
 
 #[cfg(test)]
@@ -29,8 +29,9 @@ pub(crate) mod test_utils {
 
     pub(crate) struct TrivialDistinguisher;
     impl<G> Distinguisher<G> for TrivialDistinguisher {
-        fn play(&self, _game: G) -> bool {
-            true
+        fn play_then_return(&self, game: G) -> (G, bool) {
+            // Don't modify the game
+            (game, true)
         }
     }
 }

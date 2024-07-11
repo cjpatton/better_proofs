@@ -399,6 +399,11 @@ $R_{\code{12}}^A$; if the outcome is $\code{true}$, then run $R_{\code{34}}^A$.
 %
 Applying the law of total probability,
 %
+% adv(C) = pr(C|left) - pr(C|right)
+%        = 1/2 pr(R12|left) + 1/2 pr(R34|left) - (1/2 pr(R12|right) + 1/2 pr(R34|right))
+%        = 1/2 (pr(R12|left) - pr(R12|right)) + 1/2 (pr(R34|left) - pr(R34|right))
+%        = 1/2 adv(R12) + 1/2 adv(R34)
+%
 \[
   \Adv{cpa}_\code{pub_cpa}(R_{\code{12}}^A) +
   \Adv{cpa}_\code{pub_cpa}(R_{\code{34}}^A)

@@ -434,7 +434,7 @@ pub mod test_utils {
         F: FieldElementWithInteger<Integer = u64>,
         Standard: Distribution<V::VerifyKey>,
     {
-        fn play(&self, mut game: G) -> bool {
+        fn play_then_return(&self, mut game: G) -> (G, bool) {
             let batch_size = 10;
             let test_measurement = 1;
             let vk = thread_rng().gen();
@@ -472,7 +472,7 @@ pub mod test_utils {
             if agg_share_1.len() != agg_share_0.len() {
                 // In the real world, the aggregate share will have the correct length. If it
                 // doesn't, then guess we're in the ideal world.
-                return false;
+                return (game, false);
             }
 
             let agg_result = self
@@ -482,11 +482,11 @@ pub mod test_utils {
             if agg_result != test_measurement * batch_size as u64 {
                 // In the real world, the honest aggregator will compute a share of 0. If it does
                 // not, then guess we're in the ideal world.
-                return false;
+                return (game, false);
             }
 
             // Always guess that we're in the real world.
-            true
+            (game, true)
         }
     }
 }
