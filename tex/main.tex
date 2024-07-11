@@ -59,19 +59,19 @@
 
 \section{Notation}
 
-All algorithms, including adversaries, are rust programs without $\code{async}$
-semantics.
-%
-Syntax and oracles are defined as rust traits.
-%
-Let $\code{block}$ be a rust code block whose last statement is an expression
-that evaluates to a $\code{bool}$.
-%
-We denote by $\Prob{\code{block}}$ the probability that execution of
-$\code{block}$ results in $\code{true}$.
+All algorithms, including adversaries, are rust programs without async
+semantics (i.e., with the $\code{async}$ and $\code{await}$ key words removed).
 %
 By convention, an adversary's runtime includes the time it takes to initialize
 its game and evaluate its oracle queries.
+%
+Define type $\code{Error}$ to be $\code{&'static str}$.
+%
+Let $\code{block}$ be a rust code block whose last statement is an expression
+that evaluates to a $\code{Result<bool, Error>}$.
+%
+We denote by $\Prob{\code{block}}$ the probability that execution of
+$\code{block}$ halts (without panicking) and outputs $\code{Ok(true)}$.
 
 \section{Example: Hybrid Encryption}
 
@@ -97,27 +97,6 @@ We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
     enc.decrypt(sk, enc.encrypt(pk, m)) == Some(m)}
   } = 1 \,.
 \]
-
-% ../src/joy/hybrid/mod.rs
-\begin{figure}
-\begin{lstlisting}
-pub trait PubEnc {
-    type PublicKey;
-    type SecretKey;
-    type Plaintext;
-    type Ciphertext;
-    fn key_gen(&self) -> (Self::PublicKey, Self::SecretKey);
-    fn encrypt(&self, pk: &Self::PublicKey, m: &Self::Plaintext) -> Self::Ciphertext;
-    fn decrypt(
-        &self,
-        sk: &Self::SecretKey,
-        c: &Self::Ciphertext,
-    ) -> Option<Self::Plaintext>;
-}
-\end{lstlisting}
-  \caption{Syntax of public-key encryption (PKE).}
-  \label{fig/pubenc/syntax}
-\end{figure}
 
 \subsection{Security}
 
@@ -161,6 +140,21 @@ initialize the game.
 % ../src/joy/hybrid/mod.rs
 \begin{figure}
 \begin{lstlisting}
+/// Syntax.
+pub trait PubEnc {
+    type PublicKey;
+    type SecretKey;
+    type Plaintext;
+    type Ciphertext;
+    fn key_gen(&self) -> (Self::PublicKey, Self::SecretKey);
+    fn encrypt(&self, pk: &Self::PublicKey, m: &Self::Plaintext) -> Self::Ciphertext;
+    fn decrypt(
+        &self,
+        sk: &Self::SecretKey,
+        c: &Self::Ciphertext,
+    ) -> Option<Self::Plaintext>;
+
+/// Security.
 pub struct PubCpa<E: PubEnc> {
     enc: E,
     pk: E::PublicKey,
@@ -178,25 +172,23 @@ impl<E: PubEnc> GetPublicKey for PubCpa<E> {
         &self.pk
     }
 }
-impl<E: PubEnc> LeftOrRight for PubCpa<E> {
+impl<E: SymEnc> LeftOrRight for Cpa<E> {
     type Plaintext = E::Plaintext;
     type Ciphertext = E::Ciphertext;
-    fn left_or_right(
-        &self,
-        m_left: &E::Plaintext,
-        m_right: &E::Plaintext,
-    ) -> E::Ciphertext {
+    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
         if self.right {
-            self.enc.encrypt(&self.pk, m_right)
+            self.enc.encrypt(&self.k, m_right)
         } else {
-            self.enc.encrypt(&self.pk, m_left)
+            self.enc.encrypt(&self.k, m_left)
         }
     }
 }
 \end{lstlisting}
-  \caption{Game \lstinline{PubCpa} for defining security of PKE under chosen
-  plaintext attack (CPA).}
+  \caption{Syntax of public-key encryption (PKE) and game game
+  \lstinline{PubCpa} for defining security of PKE under chosen plaintext attack
+  (CPA).}
   \label{fig/pubenc/security}
+  \label{fig/pubenc/syntax}
 \end{figure}
 
 
@@ -229,19 +221,18 @@ where
     type SecretKey = P::SecretKey;
     type Plaintext = S::Plaintext;
     type Ciphertext = (P::Ciphertext, S::Ciphertext);
+
     fn key_gen(&self) -> (P::PublicKey, P::SecretKey) {
         self.pub_enc.key_gen()
     }
-    fn encrypt(
-        &self,
-        pk: &P::PublicKey,
-        m: &S::Plaintext,
-    ) -> (P::Ciphertext, S::Ciphertext) {
+
+    fn encrypt(&self, pk: &P::PublicKey, m: &S::Plaintext) -> (P::Ciphertext, S::Ciphertext) {
         let tk = thread_rng().gen(); // "temporary key"
         let c_pub = self.pub_enc.encrypt(pk, &tk);
         let c_sym = self.sym_enc.encrypt(&tk, m);
         (c_pub, c_sym)
     }
+
     fn decrypt(
         &self,
         sk: &Self::SecretKey,
@@ -356,6 +347,7 @@ game in Figure~\ref{fig/symenc/security}.
 % ../src/joy/hybrid/mod.rs
 \begin{figure}
 \begin{lstlisting}
+/// Syntax.
 pub trait SymEnc {
     type Key;
     type Plaintext;
@@ -364,8 +356,8 @@ pub trait SymEnc {
     fn encrypt(&self, k: &Self::Key, m: &Self::Plaintext) -> Self::Ciphertext;
     fn decrypt(&self, k: &Self::Key, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
 }
-\end{lstlisting}
-\begin{lstlisting}
+
+/// Security.
 pub struct Cpa<E: SymEnc> {
     e: E,
     k: E::Key,
@@ -380,22 +372,18 @@ impl<E: SymEnc> Cpa<E> {
 impl<E: SymEnc> LeftOrRight for Cpa<E> {
     type Plaintext = E::Plaintext;
     type Ciphertext = E::Ciphertext;
-    fn left_or_right(
-        &self,
-        m_left: &E::Plaintext,
-        m_right: &E::Plaintext,
-    ) -> E::Ciphertext {
+    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
         if self.right {
-            self.e.encrypt(&self.k, m_right)
+            self.enc.encrypt(&self.k, m_right)
         } else {
-            self.e.encrypt(&self.k, m_left)
+            self.enc.encrypt(&self.k, m_left)
         }
     }
 }
 \end{lstlisting}
-  \caption{Top: syntax of symmetric encryption. Bottom: game $\code{Cpa}$
-  for defining security of symmetric encryption under chosen plaintext attack
-  (CPA) of symmetric encryption.}
+  \caption{Syntax of symmetric encryption and game $\code{Cpa}$ for defining
+  security of symmetric encryption under chosen plaintext attack (CPA) of
+  symmetric encryption.}
   \label{fig/symenc/syntax}
   \label{fig/symenc/security}
 \end{figure}

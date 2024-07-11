@@ -43,7 +43,6 @@ pub struct Cpa<E: SymEnc> {
     k: E::Key,
     right: bool,
 }
-
 impl<E: SymEnc> Cpa<E> {
     /// Initialize the game. If `right` is `true`, then the [`LeftOrRight`] oracle encrypts the
     /// right plaintext.
@@ -52,16 +51,10 @@ impl<E: SymEnc> Cpa<E> {
         Self { enc, k, right }
     }
 }
-
 impl<E: SymEnc> LeftOrRight for Cpa<E> {
     type Plaintext = E::Plaintext;
     type Ciphertext = E::Ciphertext;
-    fn left_or_right(
-        &self,
-        m_left: &E::Plaintext,
-        m_right: &E::Plaintext,
-    ) -> E::Ciphertext {
-        // NOTE This definition implicitly requires length hiding.
+    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
         if self.right {
             self.enc.encrypt(&self.k, m_right)
         } else {
@@ -82,11 +75,7 @@ pub trait PubEnc {
     type Ciphertext;
     fn key_gen(&self) -> (Self::PublicKey, Self::SecretKey);
     fn encrypt(&self, pk: &Self::PublicKey, m: &Self::Plaintext) -> Self::Ciphertext;
-    fn decrypt(
-        &self,
-        sk: &Self::SecretKey,
-        c: &Self::Ciphertext,
-    ) -> Option<Self::Plaintext>;
+    fn decrypt(&self, sk: &Self::SecretKey, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
 }
 
 // Security
@@ -97,7 +86,6 @@ pub struct PubCpa<E: PubEnc> {
     pk: E::PublicKey,
     right: bool,
 }
-
 impl<E: PubEnc> PubCpa<E> {
     /// Initialize the game. If `right` is `true`, then the [`LeftOrRight`] oracle
     /// encrypts the right plaintext.
@@ -106,22 +94,16 @@ impl<E: PubEnc> PubCpa<E> {
         Self { enc, pk, right }
     }
 }
-
 impl<E: PubEnc> GetPublicKey for PubCpa<E> {
     type PublicKey = E::PublicKey;
     fn get_pk(&self) -> &E::PublicKey {
         &self.pk
     }
 }
-
 impl<E: PubEnc> LeftOrRight for PubCpa<E> {
     type Plaintext = E::Plaintext;
     type Ciphertext = E::Ciphertext;
-    fn left_or_right(
-        &self,
-        m_left: &E::Plaintext,
-        m_right: &E::Plaintext,
-    ) -> E::Ciphertext {
+    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
         // NOTE This definition implicitly requires length hiding.
         if self.right {
             self.enc.encrypt(&self.pk, m_right)
@@ -183,7 +165,6 @@ pub struct Hybrid<P, S> {
     pub_enc: P,
     sym_enc: S,
 }
-
 impl<P, S> PubEnc for Hybrid<P, S>
 where
     S: SymEnc,
@@ -199,11 +180,7 @@ where
         self.pub_enc.key_gen()
     }
 
-    fn encrypt(
-        &self,
-        pk: &P::PublicKey,
-        m: &S::Plaintext,
-    ) -> (P::Ciphertext, S::Ciphertext) {
+    fn encrypt(&self, pk: &P::PublicKey, m: &S::Plaintext) -> (P::Ciphertext, S::Ciphertext) {
         let tk = thread_rng().gen(); // "temporary key"
         let c_pub = self.pub_enc.encrypt(pk, &tk);
         let c_sym = self.sym_enc.encrypt(&tk, m);

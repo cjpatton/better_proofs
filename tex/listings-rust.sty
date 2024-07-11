@@ -26,7 +26,7 @@
 %
 , morekeywords={break, continue, else, for, if, in, loop, match, return, while}  % control flow keywords
 , morekeywords={as, const, let, move, mut, ref, static}  % in the context of variables
-, morekeywords={async, dyn, enum, fn, impl, Self, self, struct, trait, type, union, use, where}  % in the context of declarations
+, morekeywords={await, async, dyn, enum, fn, impl, Self, self, struct, trait, type, union, use, where}  % in the context of declarations
 , morekeywords={crate, extern, mod, pub, super}  % in the context of modularisation
 , morekeywords={unsafe}  % markers
 , morekeywords={abstract, alignof, become, box, do, final, macro, offsetof, override, priv, proc, pure, sizeof, typeof, unsized, virtual, yield}  % reserved identifiers
@@ -69,6 +69,7 @@
 \definecolor{diffincl}{named}{Green}
 \definecolor{diffrem}{named}{OrangeRed}
 \definecolor{patchbackground}{rgb}{0.95,0.95,0.92}
+\definecolor{patchrule}{rgb}{0.95,0.95,0.92}
 
 \lstdefinestyle{boxed}{
   style=colouredRust%
@@ -99,5 +100,5 @@
 , framerule=10pt%
 , xleftmargin=15pt%
 , backgroundcolor=\color{patchbackground}%
-, rulecolor=\color[gray]{0.90}%
+, rulecolor=\color{patchrule}%
 }
