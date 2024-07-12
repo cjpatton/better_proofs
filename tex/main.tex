@@ -64,42 +64,46 @@ Game playing is a well-known paradigm for establishing computational security
 properties of cryptographic protocols.
 %
 In this paradigm, the security goal and execution environment are modeled as a
-\emph{game} played by the attacker.
-%
-A security proof relates the attacker's advantage in winning the game to the
-difficulty of one or more presumed hard problems.
+\emph{game} played by the attacker. A \emph{proof} of security in this model
+relates the attacker's advantage in winning the game to the difficulty of one
+or more presumed hard problems.
 
 Games are often expressed in \emph{code} rather than natural language, making
-it amendable to the following proof strategy.
+them amendable to the following proof strategy.
 %
-The proof consists of a sequence of games, sometimes called \emph{hybrids}.
-Beginning with the real game, each game is obtained by modifying the code of
-the previous one. In the final game, typically the attacker interacts with some
-object that models the ideal interaction of uncorrupted parties.
+The proof consists of a sequence of games (sometimes called \emph{hybrids})
+beginning with the game that defines security.
+%
+Each game is obtained by rewriting the code of the previous one until, in the
+final game, the attacker interacts with some idealized system that it has no
+hope of breaking.
 
-The prover's job is to establish, for each pair of neighboring games, that the
-probability of the attacker in distinguishing between the games is negligible.
+The security proof establishes that, for each pair of neighboring games, the
+probability of an attacker in distinguishing between them is negligible.
 %
-Sometimes the rewrite results in a game that is semantically equivalent, in
-which case the attacker gets no advantage.
+This is established in various ways:
 %
-Some rewrites are fixed information theoretically, by enumerating the events
-that would result in distinguishable behavior and analyzing each event's
-probability.
+some \emph{rewrites} (also called a \emph{hops} or \emph{transitions}) result
+in a game that is semantically equivalent, in which case no attacker can
+distinguish them;
 %
-Other rewrites must be established computationally, by reducing
-distinguishability to some computational assumption.
+others result in distinguishable events that occur only with some small
+probability, such as a collision in the range of a random oracle;
+%
+still other rewrites are bounded computationally, by reducing a distinguisher
+to breaking some underlying assumption, such as the hardness of solving
+discrete logarithms on the elliptic curve used by the protocol.
 
-In recent years, security proofs of this sort have played an increasingly
-central role in the design and analysis of protocols specified at IETF. In
-particular, we have seen working groups move from \emph{reacting} to knew
-attacks to \emph{proactively} seeking security analysis during the design
+In recent years, security analyses of this sort have played an increasingly
+central role in the design and analysis of protocols specified at IETF. We have
+seen working groups move from \emph{reacting} to knew attacks to
+\emph{proactively} seeking security analysis during the design
 phase~\cite{KT16}.
 %
-We have even seen this process formalized in the TLS working
+In fact, we have even seen this process formalized in the TLS working
 group~\cite{tls13-formal-analysis-triage-panel}.
 %
-Steps like this are significant, but the provable security methodology has some
+While steps like this are significant, the provable security methodology has some
 well-known limitations~\cite{Ber19}.
 %
 We consider one of them here.
@@ -107,22 +111,16 @@ We consider one of them here.
 \paragraph{Our crisis of rigor.}
 %
 In their seminal paper on the subject from Eurocrypt 2006~\cite{BR06}, Bellare
-and Rogaway assessed that many proofs of the era were ``essentially
-unverifiable'', meaning errors in these proofs, some of which could result in
-attacks, may go unnoticed. They feared that provable security would
-reach a ``crisis of rigor'' in which proofs were believed without being fully
-vetted.
+and Rogaway assessed that many security proofs of the era were ``essentially
+unverifiable''. They feared the discipline would eventually reach a ``crisis of
+rigor'' in which proofs were believed without being fully vetted, allowing
+errors in these proofs to go unnoticed. And some of these errors may belie
+attacks.
 %
-This fear has come to fruition, at least partially: several attacks have been
-documented that were missed due to a bug in the initial analysis.
-%
-\cp{TODO Add references for some of these.}
-%
-Bellare and Rogaway hoped that game playing would help reduce this risk.
+%In our experience, this fear has, at least in part, come to fruition.
 
-Today carefully checking computational security proofs of any type, including
-game-based proofs, remains a significant challenge. There seem to be at least three
-exacerbating factors:
+Today, carefully checking computational security proofs remains a significant
+challenge. There are at least three exacerbating factors:
 %
 \begin{enumerate}
 
@@ -130,52 +128,67 @@ exacerbating factors:
     intended for human readers. These are often called \emph{pen-and-paper}
     proofs.
     %
-    There is no ``standard'' pseudocode in use today: the syntax and semantics
-    are as varied as the communities that use them.
+    There is no ``standard'' pseudocode in use today, and the grammar and
+    semantics of these languages are as varied as the people that use them.
     %
-    This can make life very difficulty for program committee members, who may
-    have a stack of 10 papers or more to review, each with its own unique and
-    in possibly compatible semantics.
+    Not only does this make mechanized verification nearly impossible, it also
+    makes life difficult for human reviewers, many of whom may have a stack of
+    10 papers or more to review, each with its own unique and in possibly
+    compatible semantics.
 
-  \item Although pen-and-paper proofs are virtually impossible to check
-    mechanically (pseudocode typically has incomplete semantics), several
-    competing tools exist for developing mechanized proofs, such as
-    \href{https://bblanche.gitlabpages.inria.fr/CryptoVerif/}{CryptoVerif},
-    \href{https://github.com/EasyCrypt/easycrypt}{EasyCrypt}, and
-    \href{https://github.com/SSProve/ssprove}{SSProve}, but these tools remain
-    somewhat inaccessible to many folks writing pen-and-paper proofs today.
-    %
-    There are several reasons for this: maturity of the tooling; the
-    requirement to learn a domain specific language; or the tools being
-    tailored to specific (classes of) applications.
-    %
-    \cp{This seems like a controversial take: I would like to hear from others
-    on this point.}
-
-  \item Protocols of interest to practitioners at IETF and beyond are becoming
+  \item Protocols of interest to IETFers and their security goals are becoming
     more complex.
     %
-    First, we are seeing communities do more with cryptography, often going
+    First, we are seeing our community do more with cryptography, often going
     beyond well-studied goals like key exchange, authentication, and
     encryption.
     %
-    Second, as attacks get more sophisticated, so must security definitions
-    model the execution environment in greater detail.
+    Second, as attackers get more sophisticated, so must our security definitions
+    capture the real execution environment in greater fidelity.
     %
-    The net effect of these forces is that proofs are getting \emph{longer}.
-    This puts pressure on paper submitters, who usually need to respect a
-    strict page limit in order to get their paper accepted at a conference or
-    journal.
+    Proofs are getting \emph{longer} as a result, putting pressure on authors
+    to merely ``sketch'' the proof in order to meet the page limit for the
+    conference submission. Or they simply punt the proof to the paper's
+    appendix, which program committee members are typically not required to
+    review at all.
+
+  \item Mechanization of security proofs can help reduce burden on human
+    reviewers.
     %
-    This forces them either to replace the full proof with a ``sketch'' or punt
-    it to the paper's appendix. Typically, program committee members are not
-    required to review.
+    Several competing tools exist for this, including
+    \href{https://bblanche.gitlabpages.inria.fr/CryptoVerif/}{CryptoVerif},
+    \href{https://github.com/EasyCrypt/easycrypt}{EasyCrypt}, and
+    \href{https://github.com/SSProve/ssprove}{SSProve},\footnote{We don't
+    include tools like \href{https://tamarin-prover.com/}{Tamarin} or
+    \href{https://bblanche.gitlabpages.inria.fr/proverif/}{ProVerif} in this
+    list because these are specialized for checking symbolic properties of
+    cryptosystems, not computational ones.} but these tools remain somewhat
+    inaccessible to many folks writing pen-and-paper proofs today.
     %
-    Given this trajectory of applied cryptography research and the process for
-    reviewing it, something has to change in order to ensure proofs are
-    thoroughly vetted.
+    There are several reasons for this:
+    %
+    First and foremost, cajoling the theorem prover into generating a proof is
+    in general a manual process that requires some degree of domain expertise.
+    %
+    Beyond that, the requirement to learn a new, somewhat esoteric programming
+    language, tools that are specialized to specific applications or use cases,
+    and the maturity of the software itself can all be barriers to entry.
 
 \end{enumerate}
+%
+These factors put our community on a trajectory that, in our view, is not be
+sustainable long term.
+%
+We must therefore find ways to reduce the cost of checking security proofs so
+that the capacity of reviewers continues to meet the demands of those
+developing cryptographic protocols in practice.
+
+%Because each of these issues is socially constructed~\cite{Rog09} to some
+%degree, we should not expect any one of them to be resolved by technical means
+%alone.
+%
+%However, it is our belief that the current trajectory of practice-oriented
+%provable security cannot be sustained indefinitely.
 
 \paragraph{Thesis.}
 %
@@ -211,6 +224,29 @@ from the
 as an ideal source of uniform random coins.
 
 \section{Example: Hybrid Encryption}
+%
+In this section we consider the hybrid public-key encryption (PKE) scheme of
+\cite[Chapter~15]{joy}.
+%
+The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
+and \emph{equivalent-by-reduction}.
+
+\subsection{Syntax}
+
+A PKE scheme implements the $\code{PubEnc}$ trait listed in
+Figure~\ref{fig/pubenc/syntax}.
+%
+Let $\code{enc: E}$ implement $\code{PubEnc}$.
+%
+We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
+\code{E::Plaintext}$ it holds that
+%
+\[
+  \Prob{
+    \code{let (pk, sk) = enc.key_gen();
+    enc.decrypt(sk, enc.encrypt(pk, m)) == Some(m)}
+  } = 1 \,.
+\]
 
 % ../src/joy/hybrid/mod.rs
 \begin{figure}[t]
@@ -265,29 +301,7 @@ impl<E: SymEnc> LeftOrRight for PubCpa<E> {
   \label{fig/pubenc/security}
   \label{fig/pubenc/syntax}
 \end{figure}
-
-In this section we consider the hybrid public-key encryption (PKE) scheme of
-\cite[Chapter~15]{joy}.
 %
-The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
-and \emph{equivalent-by-reduction}.
-
-\subsection{Syntax}
-
-A PKE scheme implements the $\code{PubEnc}$ trait listed in
-Figure~\ref{fig/pubenc/syntax}.
-%
-Let $\code{enc: E}$ implement $\code{PubEnc}$.
-%
-We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
-\code{E::Plaintext}$ it holds that
-%
-\[
-  \Prob{
-    \code{let (pk, sk) = enc.key_gen();
-    enc.decrypt(sk, enc.encrypt(pk, m)) == Some(m)}
-  } = 1 \,.
-\]
 
 \subsection{Security}
 
