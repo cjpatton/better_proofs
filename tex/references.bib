@@ -16,6 +16,34 @@
       url = {https://eprint.iacr.org/2004/331}
 }
 
+@misc{Can01,
+      author = {Ran Canetti},
+      title = {Universally Composable Security: A New Paradigm for Cryptographic Protocols},
+      howpublished = {Cryptology ePrint Archive, Paper 2000/067},
+      year = {2000},
+      note = {\url{https://eprint.iacr.org/2000/067}},
+      url = {https://eprint.iacr.org/2000/067}
+}
+
+@INPROCEEDINGS {CSV19,
+author = {R. Canetti and A. Stoughton and M. Varia},
+booktitle = {2019 IEEE 32nd Computer Security Foundations Symposium (CSF)},
+title = {EasyUC: Using EasyCrypt to Mechanize Proofs of Universally Composable Security},
+year = {2019},
+volume = {},
+issn = {},
+pages = {167-16716},
+abstract = {We present a methodology for using the EasyCrypt proof assistant (originally designed for mechanizing the generation of proofs of game-based security of cryptographic schemes and protocols) to mechanize proofs of security of cryptographic protocols within the universally composable (UC) security framework. This allows, for the first time, the mechanization and formal verification of the entire sequence of steps needed for proving simulation-based security in a modular way: Specifying a protocol and the desired ideal functionality; Constructing a simulator and demonstrating its validity, via reduction to hard computational problems; Invoking the universal composition operation and demonstrating that it indeed preserves security. We demonstrate our methodology on a simple example: stating and proving the security of secure message communication via a one-time pad, where the key comes from a Diffie-Hellman key-exchange, assuming ideally authenticated communication. We first put together EasyCrypt-verified proofs that: (a) the Diffie-Hellman protocol UC-realizes an ideal key-exchange functionality, assuming hardness of the Decisional Diffie-Hellman problem, and (b) one-time-pad encryption, with a key obtained using ideal key-exchange, UC-realizes an ideal secure-communication functionality. We then mechanically combine the two proofs into an EasyCrypt-verified proof that the composed protocol realizes the same ideal secure-communication functionality. Although formulating a methodology that is both sound and workable has proven to be a complex task, we are hopeful that it will prove to be the basis for mechanized UC security analyses for significantly more complex protocols and tasks.},
+keywords = {games;cryptography;cryptographic protocols;task analysis;complexity theory},
+doi = {10.1109/CSF.2019.00019},
+url = {https://doi.ieeecomputersociety.org/10.1109/CSF.2019.00019},
+publisher = {IEEE Computer Society},
+address = {Los Alamitos, CA, USA},
+month = {jun}
+}
+
+
+
 @ebook{joy,
     title        = "The Joy of Cryptography",
     author       = "Mike Rosulek",

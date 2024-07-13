@@ -119,8 +119,8 @@ attacks.
 %
 %In our experience, this fear has, at least in part, come to fruition.
 
-Today, carefully checking computational security proofs remains a significant
-challenge. There are at least three exacerbating factors:
+Today, carefully checking security proofs remains a significant challenge.
+There are at least three exacerbating factors:
 %
 \begin{enumerate}
 
@@ -158,14 +158,10 @@ challenge. There are at least three exacerbating factors:
     Several competing tools exist for this, including
     \href{https://bblanche.gitlabpages.inria.fr/CryptoVerif/}{CryptoVerif},
     \href{https://github.com/EasyCrypt/easycrypt}{EasyCrypt}, and
-    \href{https://github.com/SSProve/ssprove}{SSProve},\footnote{We don't
-    include tools like \href{https://tamarin-prover.com/}{Tamarin} or
-    \href{https://bblanche.gitlabpages.inria.fr/proverif/}{ProVerif} in this
-    list because these are specialized for checking symbolic properties of
-    cryptosystems, not computational ones.} but these tools remain somewhat
-    inaccessible to many folks writing pen-and-paper proofs today.
+    \href{https://github.com/SSProve/ssprove}{SSProve}, but these tools remain
+    somewhat inaccessible to many folks writing pen-and-paper proofs today.
     %
-    There are several reasons for this:
+    There are several reasons for this.
     %
     First and foremost, cajoling the theorem prover into generating a proof is
     in general a manual process that requires some degree of domain expertise.
@@ -176,10 +172,10 @@ challenge. There are at least three exacerbating factors:
 
 \end{enumerate}
 %
-These factors put our community on a trajectory that, in our view, is not be
-sustainable long term.
+These factors put our community on a trajectory that, in the author's view, is
+not be sustainable long term.
 %
-We must therefore find ways to reduce the cost of checking security proofs so
+I believe we must find ways to reduce the cost of checking security proofs so
 that the capacity of reviewers continues to meet the demands of those
 developing cryptographic protocols in practice.
 
@@ -190,18 +186,59 @@ developing cryptographic protocols in practice.
 %However, it is our belief that the current trajectory of practice-oriented
 %provable security cannot be sustained indefinitely.
 
-\paragraph{Thesis.}
+\paragraph{Proposal.}
 %
-\cp{Mechanization is required; need a separation of concerns between subject
-matter experts and formal methods experts.}
-
-\paragraph{What this write up is about.}
-
-\paragraph{Scope.}
+This essay puts forward a vision for writing security proofs for protocols
+developed at IETF.
 %
-\cp{Another way to define and prove computational security properties is the
-simulation paradigm...}
-\cp{Talk about symbolic analysis.}
+You will find this proposal is somewhat opinionated: it is grounded in
+extensive experience writing pen-and-paper proofs (sometimes with bugs!), but
+no practical experience with mechanized verification or other formal methods.
+%
+\cp{...}
+
+We believe these proofs should meet two basic requirements.
+%
+First, proofs must be immediately amendable to mechanized verification. This is
+critical to minimize the cost of verifying proofs as protocols become more
+sophisticated.
+%
+Second, generating proofs must not require significantly more effort or
+expertise than pen-and-paper.
+%
+\cp{...}
+
+% XXX To meet these requirements, we envision a \emph{separation of concerns}
+% between the prover and the verifier.
+%
+% This is probably a not a new idea, but we're now at a point where it's more
+% likely to succeed.
+
+
+\paragraph{What about UC?}
+%
+While we focus on game-playing proofs, the same idea can be applied to what is
+often called the \emph{simulation paradigm}. Here security is defined relative
+to some \emph{ideal functionality} and the attacker's goal is to distinguish
+between the real system and a simulator that has access to the ideal
+functionality.
+%
+There is no fundamental difference between simulation- and game-based
+definitions that makes mechanization of one harder than the other. However, the
+details of popular simulation frameworks, like UC framework~\cite{Can01}, can
+be rather involved. Nevertheless, proofs in this framework have been
+mechanized~\cite{CSV19}.
+
+
+\paragraph{What about symbolic analysis?}
+%
+Tools like \href{https://tamarin-prover.com/}{Tamarin} or
+\href{https://bblanche.gitlabpages.inria.fr/proverif/}{ProVerif} are useful for
+proving \emph{symbolic} security properties of protocols rather than
+computational ones.
+%
+% XXX However, expressing security properties ...
+
 
 \section{Conventions}
 
@@ -223,33 +260,8 @@ from the
 \href{https://rust-random.github.io/rand/rand/index.html}{$\code{rand}$} crate
 as an ideal source of uniform random coins.
 
-\section{Example: Hybrid Encryption}
-%
-In this section we consider the hybrid public-key encryption (PKE) scheme of
-\cite[Chapter~15]{joy}.
-%
-The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
-and \emph{equivalent-by-reduction}.
 
-\subsection{Syntax}
-
-A PKE scheme implements the $\code{PubEnc}$ trait listed in
-Figure~\ref{fig/pubenc/syntax}.
-%
-Let $\code{enc: E}$ implement $\code{PubEnc}$.
-%
-We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
-\code{E::Plaintext}$ it holds that
-%
-\[
-  \Prob{
-    \code{let (pk, sk) = enc.key_gen();
-    enc.decrypt(sk, enc.encrypt(pk, m)) == Some(m)}
-  } = 1 \,.
-\]
-
-% ../src/joy/hybrid/mod.rs
-\begin{figure}[t]
+\begin{figure}
 \begin{lstlisting}
 /// Syntax.
 pub trait PubEnc {
@@ -264,6 +276,7 @@ pub trait PubEnc {
         sk: &Self::SecretKey,
         c: &Self::Ciphertext,
     ) -> Option<Self::Plaintext>;
+}
 
 /// Security.
 pub struct PubCpa<E: PubEnc> {
@@ -301,7 +314,34 @@ impl<E: SymEnc> LeftOrRight for PubCpa<E> {
   \label{fig/pubenc/security}
   \label{fig/pubenc/syntax}
 \end{figure}
+
+
+\section{Example: Hybrid Encryption}
 %
+In this section we consider the hybrid public-key encryption (PKE) scheme of
+\cite[Chapter~15]{joy}.
+%
+The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
+and \emph{equivalent-by-reduction}.
+
+
+\subsection{Syntax}
+
+A PKE scheme implements the $\code{PubEnc}$ trait listed in
+Figure~\ref{fig/pubenc/syntax}.
+%
+Let $\code{enc: E}$ implement $\code{PubEnc}$.
+%
+We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
+\code{E::Plaintext}$ it holds that
+%
+\[
+  \Prob{
+    \code{let (pk, sk) = enc.key_gen();
+    enc.decrypt(sk, enc.encrypt(pk, m)) == Some(m)}
+  } = 1 \,.
+\]
+
 
 \subsection{Security}
 
@@ -342,7 +382,6 @@ initialize the game.
   function of the length of the plaintext.
 \end{remark}
 
-\subsection{Construction}
 
 \begin{figure}[t]
 \begin{lstlisting}
@@ -384,6 +423,8 @@ where
   \label{fig/hybrid}
 \end{figure}
 
+
+\subsection{Construction}
 
 In practice, PKE schemes are constructed by combining symmetric encryption with
 a mechanism for encapsulating the encryption key to the intended
