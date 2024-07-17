@@ -44,7 +44,7 @@
 \newcommand{\Prob}[1]{\Pr\hspace{-1pt}\big[\,#1\,\big]}
 \newcommand{\code}[1]{\textrm{\textup{\lstinline{#1}}}}
 
-\title{Better proofs}
+\title{How to write proofs for cryptographic protocols at IETF}
 \author{Christopher Patton ({\texttt{\small chrispatton+ietf@gmail.com}})}
 
 \begin{document}
@@ -52,11 +52,32 @@
 \maketitle
 
 \begin{abstract}
-  \cp{TODO}
+
+  For many protocols at IETF, security rests on ``pen-and-paper'' proofs that
+  are difficult for humans to verify.
+  %
+  If the demand for provable security outpaces the capacity of human reviewers,
+  then we run the risk of missing bugs that may belie attacks.
+  %
+  One way to prevent this is to mechanize portions of the review process.
+  %
+  This essay sketches a vision for writing security proofs in which there is a
+  clear division of labor between subject matter experts and experts in formal
+  methods.
+  %
+  This, we hope, will lead to more productive interactions across disciplines
+  and to more of our proofs being fully vetted.
 
 \end{abstract}
 
 \section{Introduction}
+
+This essay accompanies a talk for
+\href{https://datatracker.ietf.org/group/ufmrg/about/}{UFMRG} at IETF 120.
+%
+It is not a traditional research paper and is based largely on my own
+observations. Its main purpose is to gather feedback.
+
 
 \paragraph{Code-based game-playing proofs~\cite{BR06}.}
 %
@@ -191,11 +212,7 @@ developing cryptographic protocols in practice.
 This essay puts forward a vision for writing security proofs for cryptographic
 protocols developed at IETF.
 %
-You will find this proposal is somewhat opinionated: it is grounded in
-extensive experience writing pen-and-paper proofs (sometimes with bugs!), but
-no practical experience with mechanized verification or other formal methods.
-
-Security proofs ought to meet to basic requirements.
+Proofs ought to meet to basic requirements.
 %
 First, proofs must be immediately amendable to mechanized verification so that
 human verifiers need not check the full proof.
@@ -242,7 +259,7 @@ knowledge about the details of the application.
 Other benefits to this approach:
 
 \begin{itemize}
-  \item Those of us IETFers who write security proofs also write software will
+  \item Those of us IETFers who write security proofs as well as software will
     discover some surprising benefits of this approach.
     %
     For example, imagine you have written a proof and pseudocode and find you
@@ -306,6 +323,16 @@ difficult~\cite{CSV19}.
 %
 Games are an attractive target merely because the details of the model are
 explicit and often simpler.
+
+
+\paragraph{Caveat.}
+%
+You will find this proposal is somewhat opinionated: it is grounded in
+extensive experience writing pen-and-paper proofs (sometimes with bugs!), but
+no practical experience with mechanized verification or other formal methods.
+%
+It may be that I'm massively underestimating how much work is being delegated
+to formal methods.
 
 
 \section{Notation}
@@ -716,49 +743,6 @@ We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
 Security under chosen plaintext attack (CPA) is defined by the $\code{Cpa}$
 game in Figure~\ref{fig/symenc/security}.
 
-\begin{figure}[t]
-\begin{lstlisting}
-/// Syntax.
-pub trait SymEnc {
-    type Key;
-    type Plaintext;
-    type Ciphertext;
-    fn key_gen(&self) -> Self::Key;
-    fn encrypt(&self, k: &Self::Key, m: &Self::Plaintext) -> Self::Ciphertext;
-    fn decrypt(&self, k: &Self::Key, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
-}
-
-/// Security.
-pub struct Cpa<E: SymEnc> {
-    e: E,
-    k: E::Key,
-    right: bool,
-}
-impl<E: SymEnc> Cpa<E> {
-    pub fn init(e: E, right: bool) -> Self {
-        let k = e.key_gen();
-        Self { e, k, right }
-    }
-}
-impl<E: SymEnc> LeftOrRight for Cpa<E> {
-    type Plaintext = E::Plaintext;
-    type Ciphertext = E::Ciphertext;
-    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
-        if self.right {
-            self.enc.encrypt(&self.k, m_right)
-        } else {
-            self.enc.encrypt(&self.k, m_left)
-        }
-    }
-}
-\end{lstlisting}
-  \caption{Syntax of symmetric encryption and game $\code{Cpa}$ for defining
-  security under CPA.}
-  \label{fig/symenc/syntax}
-  \label{fig/symenc/security}
-\end{figure}
-
-
 \begin{definition}[{\cite[Definition 7.1]{joy}}]
   Let $A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$}.
   %
@@ -870,5 +854,50 @@ pub trait Eval<F: Func> {
     fn eval(&mut self, x: &F::Domain) -> F::Range;
 }
 \end{lstlisting}
+
+\begin{figure}
+\begin{lstlisting}
+/// Syntax.
+pub trait SymEnc {
+    type Key;
+    type Plaintext;
+    type Ciphertext;
+    fn key_gen(&self) -> Self::Key;
+    fn encrypt(&self, k: &Self::Key, m: &Self::Plaintext) -> Self::Ciphertext;
+    fn decrypt(&self, k: &Self::Key, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
+}
+
+/// Security.
+pub struct Cpa<E: SymEnc> {
+    e: E,
+    k: E::Key,
+    right: bool,
+}
+impl<E: SymEnc> Cpa<E> {
+    pub fn init(e: E, right: bool) -> Self {
+        let k = e.key_gen();
+        Self { e, k, right }
+    }
+}
+impl<E: SymEnc> LeftOrRight for Cpa<E> {
+    type Plaintext = E::Plaintext;
+    type Ciphertext = E::Ciphertext;
+    fn left_or_right(&self, m_left: &E::Plaintext, m_right: &E::Plaintext) -> E::Ciphertext {
+        if self.right {
+            self.enc.encrypt(&self.k, m_right)
+        } else {
+            self.enc.encrypt(&self.k, m_left)
+        }
+    }
+}
+\end{lstlisting}
+  \caption{Syntax of symmetric encryption and game $\code{Cpa}$ for defining
+  security under CPA.}
+  \label{fig/symenc/syntax}
+  \label{fig/symenc/security}
+\end{figure}
+
+
+
 
 \end{document}
