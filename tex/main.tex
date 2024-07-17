@@ -349,7 +349,30 @@ explicit.
 
 \section{Bugs in Security Proofs}\label{sec/bugs}
 
-XXX
+\paragraph{OCB2.}
+%
+OCB2 (``Offset CodeBook'') is a blockipher mode of operation that provides for
+authenticated encryption standardized by ISO (ISO/IEC 19772:2009). In
+2018~\cite{IIMP19}, an existential forgery attack against OCB2 was
+demonstrated, exploiting a detail of the construction that was overlooked in
+the original security analysis.
+%
+The attack is simple and efficient, and with a bit more work, it can be
+improved into a total break of both authenticity and confidentiality.
+%
+Note that its successor, OCB3 (RFC 7253), is not vulnerable to the same class
+of attacks.
+
+\paragraph{GCM.}
+%
+GCM (``Galois Counter Mode'') is a mode of operation for AES that has been
+recommended by NIST since 2007 and is widely used at IETF and beyond.
+%
+In 2012~\cite{IOM12}, an efficient distinguisher was discovered that
+contradicts the concrete security claimed by the existing security proof.
+%
+The attack does not result in a total break. In fact, the authors describe an
+alternative proof with slightly looser security.
 
 
 \section{Notation}\label{sec/notation}
@@ -597,7 +620,7 @@ We then encrypt $\code{tk}$ using the PKE scheme $\code{pub_enc}$.
 Finally, we encrypt the plaintext under $\code{tk}$ and output both
 ciphertexts.
 
-\begin{theorem}\label{thm/hybrid}
+\begin{theorem}[{\cite[Claim~15.9]{joy}}]\label{thm/hybrid}
   Suppose that $\code{pub_enc}$ and $\code{sym_enc}$ satisfy the constraints of
   Figure~\ref{fig/hybrid} and let $\code{hybrid} = \code{Hybrid\{
     pub_enc, sym_enc \}}$.
