@@ -118,8 +118,8 @@ can distinguish them;
 others rewrites result in distinguishable events that occur only with small
 probability, such as a collision in the range of a random oracle;
 %
-still others are bounded computationally, by reducing a distinguisher to
-breaking some underlying assumption.
+still others are bounded computationally, by reducing some assumed hard problem
+to a distinguisher.
 
 In recent years, security analyses of this sort have played an increasingly
 central role in the design and analysis of protocols specified at IETF. We have
@@ -314,8 +314,8 @@ These examples illustrate three common game rewrites:
 \emph{equivalent-rewrite}, in which the new code is semantically equivalent
 (useful for setting up the next step in the proof);
 %
-\emph{equivalent-by-reduction}, in which a distinguisher is reduced to a
-distinguisher for a simpler game; and
+\emph{equivalent-by-reduction}, in which an assumed hard problem is reduced to
+a distinguisher between the games; and
 %
 \emph{equivalent-until-bad}, in which the new game is equivalent up to some
 distinguishing, ``bad'' event~\cite{BR06}.
