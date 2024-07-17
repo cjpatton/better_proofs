@@ -351,8 +351,8 @@ explicit.
 
 \paragraph{OCB2.}
 %
-OCB2 (``Offset CodeBook'') is a blockipher mode of operation that provides for
-authenticated encryption standardized by ISO (ISO/IEC 19772:2009). In
+OCB2 (``Offset Code Book'') is a blockipher mode of operation that provides for
+authenticated encryption standardized by ISO in 2009 (ISO/IEC 19772:2009). In
 2018~\cite{IIMP19}, an existential forgery attack against OCB2 was
 demonstrated, exploiting a detail of the construction that was overlooked in
 the original security analysis.
@@ -365,14 +365,31 @@ of attacks.
 
 \paragraph{GCM.}
 %
-GCM (``Galois Counter Mode'') is a mode of operation for AES that has been
-recommended by NIST since 2007 and is widely used at IETF and beyond.
+GCM (``Galois Counter Mode'') is another mode of operation for blockciphers
+that has been recommended by NIST since 2007 and is widely used at IETF and
+beyond.
 %
 In 2012~\cite{IOM12}, an efficient distinguisher was discovered that
 contradicts the concrete security claimed by the existing security proof.
 %
 The attack does not result in a total break. In fact, the authors describe an
 alternative proof with slightly looser security.
+%
+This does, however, impact the safety limits for GCM~\cite{irtf-cfrg-aead-limits-08}.
+
+\paragraph{HMQV.}
+%
+The HMQV protocol (``Hashed MQV'', where ``MQV'' stands for the authors of an
+earlier protocol) is a well-known milestone in the evolution of authenticated
+key exchange, being one of the earliest such protocols with a provable security
+treatment.
+%
+Shortly after the proof was published in 2005~\cite{Kra05}, the protocol was
+(somewhat famously) broken the same year~\cite{Men05}.
+%
+The attacks exploit HMQV's omission of public-key validation, pointing to at
+least one flaw in the security proof where a public-key controlled by the
+attacker was assumed to be valid. (See the preface of~\cite{Kra05}.)
 
 
 \section{Notation}\label{sec/notation}
