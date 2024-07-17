@@ -56,10 +56,10 @@ key, $\code{_tk_right}$. Let us call this new key (unused for the moment) the
   \]
 \end{claim}
 %
-\cp{The main goal for this document is to identify the best methodology for
-establishing claims like this. The goal here seems simple, at least in
-principle: prove that the programs in this equality are equivalent, and thus
-the output being $\code{true}$ is equiprobable in both experiments.}
+%\cp{The main goal for this document is to identify the best methodology for
+%establishing claims like this. The goal here seems simple, at least in
+%principle: prove that the programs in this equality are equivalent, and thus
+%the output being $\code{true}$ is equiprobable in both experiments.}
 
 Next, game $\code{G2}$ is obtained by applying the following patch to the
 $\code{LeftOrRight}$ oracle. By this we mean removing the lines beginning with
@@ -91,8 +91,8 @@ We can reduce the attacker's ability to distinguish between $\code{G1}$ and
 $\code{G2}$ to the CPA security of $\code{pub_cpa}$.
 %
 Consider the following reduction, which transforms a $\code{hybrid}$ attacker
-into a $\code{pub_enc}$ attacker. For the moment, fix $\code{right == false}$;
-we will use $\code{right == true}$ in a later step.
+into a $\code{pub_enc}$ attacker. For the moment, fix $\code{sim_right ==
+false}$; we will use $\code{sim_right == true}$ in a later step.
 %
 \begin{lstlisting}
 pub struct FromHybridToPubEnc<P, S>
@@ -101,17 +101,17 @@ where
 {
     sym_enc: S,
     game: PubCpa<P>, // Instance of the game for `pub_enc`.
-    right: bool,
+    sim_right: bool,
 }
 impl<P, S> FromHybridToPubEnc<P, S>
 where
     P: PubEnc,
 {
-    pub fn init(game: PubCpa<P>, sym_enc: S, right: bool) -> Self {
+    pub fn init(game: PubCpa<P>, sym_enc: S, sim_right: bool) -> Self {
         Self {
             game,
             sym_enc,
-            right,
+            sim_right,
         }
     }
 }
@@ -145,7 +145,7 @@ where
         // otherwise, transition from `G3` to `G4`. If `game.left`, then
         // simulate the former; otherwise simulate the latter.
         let c_pub = self.game.left_or_right(&tk_left, &tk_right);
-        let c_sym = if self.right {
+        let c_sym = if self.sim_right {
             self.sym_enc.encrypt(&tk_left, m_right)
     } else {
             self.sym_enc.encrypt(&tk_left, m_left)
@@ -165,10 +165,10 @@ $\code{G1}$ when $\code{game.left == false}$ and $\code{G2}$ otherwise.
 Let $R_{\code{12}}^A(\code{game}) =
 A\code{.play(FromHybridToPubEnc::init(game), sym_enc, false))}$.
 %
-We Have the following.
+We wave the following.
 %
-\cp{Here again is a step that we need to prove formally. Like the previous
-claim, our goal is to prove that two pieces of code are equivalent.}
+%\cp{Here again is a step that we need to prove formally. Like the previous
+%claim, our goal is to prove that two pieces of code are equivalent.}
 
 \begin{claim}[Equivalent-by-reduction]\label{claim/proof/hybrid/12}
   For all~$A$,
@@ -216,7 +216,7 @@ $\code{LeftOrRight}$ oracle once more:
 Now instead of encrypting the left plaintext, in the new game we encrypt the
 right plaintext. Because $\code{c_pub}$ is independent of $\code{c_sym}$, we
 can reduce the adversary's advantage in distinguishing $\code{G2}$ from
-$\code{G2}$ to its advantage in breaking $\code{pub_enc}$.
+$\code{G2}$ to its advantage in breaking $\code{sym_enc}$.
 %
 Consider the following reduction:
 %
@@ -288,9 +288,9 @@ simulates $\code{G2}$ and simulates $\code{G3}$ otherwise.
 Let $R_{\code{23}}^A(\code{game}) =
 A\code{.play(FromHybridToSymEnc::init(game), pub_enc))}$.
 %
-We Have the following.
+We have the following.
 %
-\cp{Here again is a step that we need to prove formally.}
+%\cp{Here again is a step that we need to prove formally.}
 
 \begin{claim}[Equivalent-by-reduction]
   For all~$A$,
@@ -336,7 +336,8 @@ In the new game, we encrypt the right temporary key instead of the left. Here
 again we bound the attacker's distinguishing advantage by reducing to CPA
 security of $\code{pub_enc}$.
 %
-We can reuse $\code{FromHybridToPubEnc}$, except we fix $\code{right == true}$.
+We can reuse $\code{FromHybridToPubEnc}$, except we fix $\code{sim_right ==
+true}$.
 %
 Let $R_{\code{34}}^A(\code{game}) =
 A\code{.play(FromHybridToPubEnc::init(game), sym_enc, true))}$.
@@ -356,9 +357,9 @@ We Have the following.
   \]
 \end{claim}
 %
-\cp{The proof is pretty much the same as for Claim~\ref{claim/proof/hybrid/12};
-the only difference is that the setting of the $\code{right}$ flag. In fact, we
-may be able to prove both claims at once.}
+%\cp{The proof is pretty much the same as for Claim~\ref{claim/proof/hybrid/12};
+%the only difference is that the setting of the $\code{right}$ flag. In fact, we
+%may be able to prove both claims at once.}
 %
 Then by definition,
 %
@@ -379,7 +380,7 @@ true}$.
   \]
 \end{claim}
 %
-\cp{To be proven.}
+%\cp{To be proven.}
 
 So far we have that
 %

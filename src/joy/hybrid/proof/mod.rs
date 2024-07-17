@@ -14,17 +14,17 @@ where
 {
     sym_enc: S,
     game: PubCpa<P>, // Instance of the game for `pub_enc`.
-    right: bool,
+    sim_right: bool,
 }
 impl<P, S> FromHybridToPubEnc<P, S>
 where
     P: PubEnc,
 {
-    pub fn init(game: PubCpa<P>, sym_enc: S, right: bool) -> Self {
+    pub fn init(game: PubCpa<P>, sym_enc: S, sim_right: bool) -> Self {
         Self {
             game,
             sym_enc,
-            right,
+            sim_right,
         }
     }
 }
@@ -58,7 +58,7 @@ where
         // otherwise, transition from `G3` to `G4`. If `game.left`, then
         // simulate the former; otherwise simulate the latter.
         let c_pub = self.game.left_or_right(&tk_left, &tk_right);
-        let c_sym = if self.right {
+        let c_sym = if self.sim_right {
             self.sym_enc.encrypt(&tk_left, m_right)
         } else {
             self.sym_enc.encrypt(&tk_left, m_left)

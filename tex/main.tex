@@ -66,7 +66,8 @@ properties of cryptographic protocols.
 In this paradigm, the security goal and execution environment are modeled as a
 \emph{game} played by the attacker. A \emph{proof} of security in this model
 relates the attacker's advantage in winning the game to the difficulty of one
-or more presumed hard problems.
+or more presumed hard problems, like breaking AES or solving discrete
+logarithms on the elliptic curve used by the protocol.
 
 Games are often expressed in \emph{code} rather than natural language, making
 them amendable to the following proof strategy.
@@ -83,16 +84,15 @@ probability of an attacker in distinguishing between them is negligible.
 %
 This is established in various ways:
 %
-some \emph{rewrites} (also called a \emph{hops} or \emph{transitions}) result
-in a game that is semantically equivalent, in which case no attacker can
-distinguish them;
+sometimes a \emph{rewrite} (also called a \emph{hop} or \emph{transition})
+results in a game that is semantically equivalent, in which case no attacker
+can distinguish them;
 %
-others result in distinguishable events that occur only with some small
+others rewrites result in distinguishable events that occur only with small
 probability, such as a collision in the range of a random oracle;
 %
-still other rewrites are bounded computationally, by reducing a distinguisher
-to breaking some underlying assumption, such as the hardness of solving
-discrete logarithms on the elliptic curve used by the protocol.
+still others are bounded computationally, by reducing a distinguisher to
+breaking some underlying assumption.
 
 In recent years, security analyses of this sort have played an increasingly
 central role in the design and analysis of protocols specified at IETF. We have
@@ -103,8 +103,8 @@ phase~\cite{KT16}.
 In fact, we have even seen this process formalized in the TLS working
 group~\cite{tls13-formal-analysis-triage-panel}.
 %
-While steps like this are significant, the provable security methodology has some
-well-known limitations~\cite{Ber19}.
+While steps like these go a long way towards preventing attacks, the provable
+security methodology has some well-known limitations~\cite{Ber19}.
 %
 We consider one of them here.
 
@@ -133,11 +133,10 @@ There are at least three exacerbating factors:
     %
     Not only does this make mechanized verification nearly impossible, it also
     makes life difficult for human reviewers, many of whom may have a stack of
-    10 papers or more to review, each with its own unique and in possibly
-    compatible semantics.
+    10 papers or more to review, each with its own unique and possibly
+    incompatible semantics.
 
-  \item Protocols of interest to IETFers and their security goals are becoming
-    more complex.
+  \item Protocols of interest to IETFers are becoming more complex.
     %
     First, we are seeing our community do more with cryptography, often going
     beyond well-studied goals like key exchange, authentication, and
@@ -155,7 +154,7 @@ There are at least three exacerbating factors:
   \item Mechanization of security proofs can help reduce burden on human
     reviewers.
     %
-    Several competing tools exist for this, including
+    Several tools exist for this, including
     \href{https://bblanche.gitlabpages.inria.fr/CryptoVerif/}{CryptoVerif},
     \href{https://github.com/EasyCrypt/easycrypt}{EasyCrypt}, and
     \href{https://github.com/SSProve/ssprove}{SSProve}, but these tools remain
@@ -164,7 +163,8 @@ There are at least three exacerbating factors:
     There are several reasons for this.
     %
     First and foremost, cajoling the theorem prover into generating a proof is
-    in general a manual process that requires some degree of domain expertise.
+    in general a manual process that requires some degree of domain expertise
+    in the theory that underlies the proof assistant.
     %
     Beyond that, the requirement to learn a new, somewhat esoteric programming
     language, tools that are specialized to specific applications or use cases,
@@ -172,8 +172,8 @@ There are at least three exacerbating factors:
 
 \end{enumerate}
 %
-These factors put our community on a trajectory that, in the author's view, is
-not be sustainable long term.
+These factors put our community on a trajectory that, in my view, is not be
+sustainable long term.
 %
 I believe we must find ways to reduce the cost of checking security proofs so
 that the capacity of reviewers continues to meet the demands of those
@@ -188,67 +188,138 @@ developing cryptographic protocols in practice.
 
 \paragraph{Proposal.}
 %
-This essay puts forward a vision for writing security proofs for protocols
-developed at IETF.
+This essay puts forward a vision for writing security proofs for cryptographic
+protocols developed at IETF.
 %
 You will find this proposal is somewhat opinionated: it is grounded in
 extensive experience writing pen-and-paper proofs (sometimes with bugs!), but
 no practical experience with mechanized verification or other formal methods.
-%
-\cp{...}
 
-We believe these proofs should meet two basic requirements.
+Security proofs ought to meet to basic requirements.
 %
-First, proofs must be immediately amendable to mechanized verification. This is
-critical to minimize the cost of verifying proofs as protocols become more
-sophisticated.
+First, proofs must be immediately amendable to mechanized verification so that
+human verifiers need not check the full proof.
 %
 Second, generating proofs must not require significantly more effort or
-expertise than pen-and-paper.
-%
-\cp{...}
+expertise than pen-and-paper so that human provers are not tempted to write a
+proof sketch only.
 
-% XXX To meet these requirements, we envision a \emph{separation of concerns}
-% between the prover and the verifier.
+The key idea is simple: proofs should be written in a programming language
+that:
 %
-% This is probably a not a new idea, but we're now at a point where it's more
-% likely to succeed.
+\begin{enumerate}
+  \item is already in wide use at IETF;
+
+  \item is high-level enough to be suitable as a specification language. That
+    is is, the protocol can be understood without expertise in the language;
+    and
+
+  \item is the target language for production software so that the
+    specification itself can be more easily integrated into these systems.
+\end{enumerate}
+%
+This is not a particularly novel idea, yet it is not an idea that has taken
+root among mast practitioners of provable security.
+%
+Part of the problem is the lack of a consensus language with suitable tools for
+formal methods. As I will try to illustrate here, we may be on the cusp of a
+solution.
+
+The potential benefit of writing game-playing proofs in an actual code rather
+than pseudocode is that it creates a \emph{separation of concerns} that results
+in higher quality and more efficient collaborations across disciplines.
+%
+On one end of the assembly line, the \emph{subject matter expert} specifies the
+security game and protocol and generates the proof, consisting of the game
+rewrites and reductions. Ideally, this requires no knowledge of formal methods,
+only the specification language.
+%
+On the other end of the assembly line, the \emph{formal methods expert}
+verifies correctness of each of the rewrites. Ideally, this amounts to checking
+equivalence of programs written in the specification language and requires no
+knowledge about the details of the application.
+
+Other benefits to this approach:
+
+\begin{itemize}
+  \item Those of us IETFers who write security proofs also write software will
+    discover some surprising benefits of this approach.
+    %
+    For example, imagine you have written a proof and pseudocode and find you
+    need to go back and tweak the definition: the process of propagating that
+    tweak through the proof is both time-intensive and error-prone. Having a
+    compiler with a type checker and a set of high-quality unit tests can make
+    this much more sane.
+
+  \item Cryptographers spend a large amount of energy working on definitions.
+    Much of this time is spent probing for ``trivial'' distinguishers or
+    winning conditions that would suggest the attacker is too powerful or not
+    captured in the right way.
+    %
+    Writing such definitions in code might make it possible to formalize such
+    conditions symbolically in tools like
+    \href{https://tamarin-prover.com/}{Tamarin} or
+    \href{https://bblanche.gitlabpages.inria.fr/proverif/}{ProVerif}.
+\end{itemize}
+
+\paragraph{Outline.}
+%
+In this essay study a few elementary examples of security proofs from the
+cryptographic literature, transcribing them into a high-level programming
+language.
+%
+These examples illustrate the kind of work carried out by the \emph{subject
+matter expert}; the task of the \emph{formal methods expert} is to prove each
+claim (written as \textbf{Claim}) in the body of the proof.
+%
+Section~\ref{sec/hybrid} recalls the simple hybrid, public-key encryption
+scheme from Mike Rosulek's ``Joy of Cryptography''`~\cite{joy} and proves it
+
+These examples illustrate three common game rewrites:
+%
+\emph{equivalent-rewrite}, in which the new code is semantically equivalent
+(useful for setting up the next step in the proof);
+%
+\emph{equivalent-by-reduction}, in which a distinguisher is reduced to a
+distinguisher of a simpler game; and
+%
+\emph{equivalent-until-bad}, in which the new game is equivalent up to some
+distinguishing, ``bad'' event~\cite{BR06}.
 
 
 \paragraph{What about UC?}
 %
 While we focus on game-playing proofs, the same idea can be applied to what is
 often called the \emph{simulation paradigm}. Here security is defined relative
-to some \emph{ideal functionality} and the attacker's goal is to distinguish
-between the real system and a simulator that has access to the ideal
-functionality.
+to some \emph{ideal functionality}, and we say the protocol \emph{realizes}
+that ideal functionality if, for every attacker, there exists a simulator such
+that the adversary's interaction with the real system is indistinguishable from
+the simulator's interaction with the ideal functionality.
 %
 There is no fundamental difference between simulation- and game-based
-definitions that makes mechanization of one harder than the other. However, the
-details of popular simulation frameworks, like UC framework~\cite{Can01}, can
-be rather involved. Nevertheless, proofs in this framework have been
-mechanized~\cite{CSV19}.
-
-
-\paragraph{What about symbolic analysis?}
+definitions that makes mechanization of proofs in one paradigm harder than the
+other.
 %
-Tools like \href{https://tamarin-prover.com/}{Tamarin} or
-\href{https://bblanche.gitlabpages.inria.fr/proverif/}{ProVerif} are useful for
-proving \emph{symbolic} security properties of protocols rather than
-computational ones.
+However, the details of popular simulation frameworks, like UC
+framework~\cite{Can01}, can be rather involved, making mechanization more
+difficult~\cite{CSV19}.
 %
-% XXX However, expressing security properties ...
+Games are an attractive target merely because the details of the model are
+explicit and often simpler.
 
 
-\section{Conventions}
+\section{Notation}
 
-All algorithms, including adversaries, are rust programs without async
-semantics (i.e., with the $\code{async}$ and $\code{await}$ key words removed).
+All algorithms, including games and adversaries, are Rust
+(\url{https://www.rust-lang.org/}) programs without asynchronous semantics
+(i.e., with the $\code{async}$ and $\code{await}$ key words
+removed).\footnote{Asynchronous Rust is excluded because it is not needed to
+formalize execution of games.}
 %
 By convention, an adversary's runtime includes the time it takes to initialize
 its game and evaluate its oracle queries.
 %
-Let $\code{block}$ be a rust code block whose last statement is an expression
+Let $\code{block}$ be a Rust code block whose last statement is an expression
 that evaluates to $\code{bool}$.
 %
 We denote by $\Prob{\code{block}}$ the probability that execution of
@@ -260,8 +331,26 @@ from the
 \href{https://rust-random.github.io/rand/rand/index.html}{$\code{rand}$} crate
 as an ideal source of uniform random coins.
 
+\paragraph{Why Rust?}
+%
+Rust easily meets two of our criteria: it is widely used at IETF and in
+production software systems.
+%
+Whether it is suitable as a specification language is debatable; I will try to
+make the case that it is, by conveying to the reader what elements of Rust are
+important to understanding definitions herein.
 
-\begin{figure}
+Another important reason for choosing Rust is that it is the specification
+language of the HAX toolchain (\url{https://cryspen.com/hax/}).
+%
+HAX is used to transcribe Rust into one of many \emph{backend} languages, such
+as F* and Coq, where existing tools can be applied for various purposes.
+%
+HAX was not designed with this particular use case in mind, and based on our
+initial experiments with, it appears to not yet be complete enough to work.
+
+
+\begin{figure}[t]
 \begin{lstlisting}
 /// Syntax.
 pub trait PubEnc {
@@ -271,11 +360,7 @@ pub trait PubEnc {
     type Ciphertext;
     fn key_gen(&self) -> (Self::PublicKey, Self::SecretKey);
     fn encrypt(&self, pk: &Self::PublicKey, m: &Self::Plaintext) -> Self::Ciphertext;
-    fn decrypt(
-        &self,
-        sk: &Self::SecretKey,
-        c: &Self::Ciphertext,
-    ) -> Option<Self::Plaintext>;
+    fn decrypt(&self, sk: &Self::SecretKey, c: &Self::Ciphertext) -> Option<Self::Plaintext>;
 }
 
 /// Security.
@@ -308,17 +393,16 @@ impl<E: SymEnc> LeftOrRight for PubCpa<E> {
     }
 }
 \end{lstlisting}
-  \caption{Syntax of public-key encryption (PKE) and game game
-  \lstinline{PubCpa} for defining security of PKE under chosen plaintext attack
-  (CPA).}
+  \caption{Syntax of PKE and game \lstinline{PubCpa}
+  for defining security under chosen plaintext attack (CPA).}
   \label{fig/pubenc/security}
   \label{fig/pubenc/syntax}
 \end{figure}
 
 
-\section{Example: Hybrid Encryption}
-%
-In this section we consider the hybrid public-key encryption (PKE) scheme of
+\section{Example: Hybrid Encryption}\label{sec/hybrid}
+
+We first consider the hybrid public-key encryption (PKE) scheme of
 \cite[Chapter~15]{joy}.
 %
 The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
@@ -330,7 +414,13 @@ and \emph{equivalent-by-reduction}.
 A PKE scheme implements the $\code{PubEnc}$ trait listed in
 Figure~\ref{fig/pubenc/syntax}.
 %
+(A \emph{trait} is similar to an interface or abstract base class in other
+languages that defines an API but not an implementation of the API.)
+%
 Let $\code{enc: E}$ implement $\code{PubEnc}$.
+%
+(That is, $\code{enc}$ is a PKE scheme because its type, denoted $\code{E}$
+implements the $\code{PubEnc}$ trait. See Figure~\ref{fig/hybrid}, line~5.)
 %
 We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
 \code{E::Plaintext}$ it holds that
@@ -352,8 +442,13 @@ It captures a left-or-right notion of indistinguishability by giving the
 attacker an oracle \hyperref[sec/traits]{$\code{LeftOrRight}$} that encrypts
 one of two messages chosen by the attacker and returns the ciphertext.
 %
+(Each trait implemented by the game defines an oracle that the attacker has
+access to. One is $\code{LeftOrRight}$; the other is
+\hyperref[sec/traits]{$\code{GetPublicKey}$}, which grants access to the
+encryption key.)
+%
 Which message is encrypted is controlled by a boolean $\code{right}$ used to
-initialize the game.
+initialize the game (line 19).
 
 \begin{definition}[{\cite[Definition 15.1]{joy}}]
   Let~$A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$}.
@@ -426,10 +521,10 @@ where
 
 \subsection{Construction}
 
-In practice, PKE schemes are constructed by combining symmetric encryption with
-a mechanism for encapsulating the encryption key to the intended
-recipient~\cite{rfc9180} (that is, the holder of the secret key corresponding
-to the public encapsulation key).
+In practice, PKE schemes are most often constructed by combining symmetric
+encryption with a mechanism for encapsulating the encryption key to the
+intended recipient~\cite{rfc9180} (that is, the holder of the secret key
+corresponding to the public encapsulation key).
 %
 By way of gentle introduction to this paradigm, Mike Rosulek gives a
 construction of CPA-secure, hybrid encryption in ``The Joy of
@@ -446,8 +541,9 @@ Appendix~\ref{sec/symenc}.
 %
 The transformation involves a PKE scheme $\code{pub_enc: E}$ with a small
 plaintext space. In particular, we require that plaintext space of
-$\code{pub_enc}$ is the same as the key space for $\code{sym_enc}$. Formally,
-$\code{E: PubEnc<Plaintext = S::Key>}$ (see line 8).
+$\code{pub_enc}$ is the same as the key space for $\code{sym_enc}$. This is
+formalized by the trait bound $\code{E: PubEnc<Plaintext = S::Key>}$ (see line
+8).
 
 To encrypt a plaintext, we choose a ``temporary key'' $\code{tk}$ uniform
 randomly from the key space of $\code{sym_enc}$.
@@ -477,7 +573,8 @@ ciphertexts.
   \input{hybrid-proof}
 \end{proof}
 
-\section{Example: The PRP/PRF Switching Lemma}
+
+\section{Example: The PRP/PRF Switching Lemma}\label{sec/switching}
 
 In this section we fix the PRP/PRF switching lemma~\cite{BR06}, which states
 that a good pseudorandom permutation (PRP) is a good pseudorandom function
@@ -485,23 +582,7 @@ that a good pseudorandom permutation (PRP) is a good pseudorandom function
 %
 The proof demonstrates the \emph{equivalent-until-bad} transition.
 
-Syntactically, both a PRP and PRF implement the $\code{Eval}$ trait listed in
-Figure~\ref{fig/func/syntax}.\footnote{A PRP also implements the inverse of
-$\code{Eval::eval()}$. We do not list this syntax because it is not needed
-here.}
-%
-For example, the AES-128 blockipher would set $\code{Key}$, $\code{Domain}$,
-and $\code{Range}$ to $\code{[u8; 16]}$.
-%
-Security is defined by the $\code{Real}$ game in Figure~\ref{fig/func/real},
-which gives the attacker an oracle for the function with a randomly sampled
-key. In the ideal PRP and PRF games, the oracle lazy evaluates, respectively, a
-random permutation and a random function over the same domain and range.
-%
-The ideal games, denoted $\code{RandPerm}$ and $\code{RandFunc}$, are listed
-for completeness in Appendix~\ref{sec/func/ideal}.
-
-\begin{figure}
+\begin{figure}[t]
 \begin{lstlisting}
 /// Syntax.
 pub trait Func {
@@ -537,6 +618,23 @@ impl<F: Func> Eval<F> for Real<F> {
   \label{fig/func/real}
 \end{figure}
 
+
+Syntactically, both a PRP and PRF implement the $\code{Eval}$ trait listed in
+Figure~\ref{fig/func/syntax}.\footnote{A PRP also implements the inverse of
+$\code{Eval::eval()}$. We do not list this syntax because it is not needed
+here.}
+%
+For example, the AES-128 blockipher would set $\code{Key}$, $\code{Domain}$,
+and $\code{Range}$ to $\code{[u8; 16]}$.
+%
+Security is defined by the $\code{Real}$ game in Figure~\ref{fig/func/real},
+which gives the attacker an oracle for the function with a randomly sampled
+key. In the ideal PRP and PRF games, the oracle lazy evaluates, respectively, a
+random permutation and a random function.
+%
+The ideal games, denoted $\code{RandPerm}$ and $\code{RandFunc}$, are listed
+for completeness in Appendix~\ref{sec/func/ideal}.
+
 Let $\code{f: F}$ implement \hyperref[fig/func/syntax]{$\code{Func}$} and
 let~$A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$} for
 \hyperref[sec/traits]{$\code{Eval<F>}$}.
@@ -550,6 +648,11 @@ let~$A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$} for
       \Prob{A\code{.play(Real::with(f))}} -
       \Prob{A\code{.play(RandPerm::default())}} \,.
   \]
+  %
+  (The $\code{default()}$ method is provided by the
+  \href{https://doc.rust-lang.org/std/default/trait.Default.html}{$\code{Default}$}
+  trait, which the \hyperref[sec/traits]{$\code{RandPerm}$} trait derives automatically.
+  The hash map and hash set are initially empty.)
   %
   Informally, we say $\code{f}$ is a PRP if every efficient attacker gets small
   advantage.
@@ -582,10 +685,13 @@ let~$A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$} for
   \input{switching-proof}
 \end{proof}
 
+
 \bibliographystyle{plain} % We choose the "plain" reference style
 \bibliography{references}
 
+
 \appendix
+
 
 \section{Deferred Definitions}
 
@@ -610,26 +716,7 @@ We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
 Security under chosen plaintext attack (CPA) is defined by the $\code{Cpa}$
 game in Figure~\ref{fig/symenc/security}.
 
-\begin{definition}[{\cite[Definition 7.1]{joy}}]
-  Let $A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$}.
-  %
-  Let~$\code{enc}$ implement \hyperref[fig/symenc/syntax]{$\code{SymEnc}$}.
-  %
-  Define the advantage of~$A$ in breaking the security of $\code{enc}$ under CPA
-  as
-  %
-  \[
-    \Adv{cpa}_{\code{enc}}(A) =
-      \Prob{A\code{.play(Cpa::init(enc, false))}} -
-      \Prob{A\code{.play(Cpa::init(enc, true))}} \,.
-  \]
-  %
-  Informally, we say $\code{enc}$ is secure under CPA if every efficient adversary
-  has small advantage.
-\end{definition}
-
-% ../src/joy/hybrid/mod.rs
-\begin{figure}
+\begin{figure}[t]
 \begin{lstlisting}
 /// Syntax.
 pub trait SymEnc {
@@ -666,11 +753,30 @@ impl<E: SymEnc> LeftOrRight for Cpa<E> {
 }
 \end{lstlisting}
   \caption{Syntax of symmetric encryption and game $\code{Cpa}$ for defining
-  security of symmetric encryption under chosen plaintext attack (CPA) of
-  symmetric encryption.}
+  security under CPA.}
   \label{fig/symenc/syntax}
   \label{fig/symenc/security}
 \end{figure}
+
+
+\begin{definition}[{\cite[Definition 7.1]{joy}}]
+  Let $A$ implement \hyperref[sec/traits]{$\code{Distinguisher}$}.
+  %
+  Let~$\code{enc}$ implement \hyperref[fig/symenc/syntax]{$\code{SymEnc}$}.
+  %
+  Define the advantage of~$A$ in breaking the security of $\code{enc}$ under CPA
+  as
+  %
+  \[
+    \Adv{cpa}_{\code{enc}}(A) =
+      \Prob{A\code{.play(Cpa::init(enc, false))}} -
+      \Prob{A\code{.play(Cpa::init(enc, true))}} \,.
+  \]
+  %
+  Informally, we say $\code{enc}$ is secure under CPA if every efficient adversary
+  has small advantage.
+\end{definition}
+
 
 \subsection{Ideal games for defining PRPs and PRFs}
 \label{sec/func/ideal}
@@ -737,6 +843,7 @@ where
 pub trait Distinguisher<G> {
     fn play_then_return(&self, game: G) -> (G, bool);
     fn play(&self, game: G) -> bool {
+        // Return the `bool` only.
         self.play_then_return(game).1
     }
 }
