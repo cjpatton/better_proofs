@@ -379,17 +379,33 @@ This does, however, impact the safety limits for GCM~\cite{irtf-cfrg-aead-limits
 
 \paragraph{HMQV.}
 %
-The HMQV protocol (``Hashed MQV'', where ``MQV'' stands for the authors of an
-earlier protocol) is a well-known milestone in the evolution of authenticated
+The HMQV protocol is a well-known milestone in the evolution of authenticated
 key exchange, being one of the earliest such protocols with a provable security
 treatment.
 %
-Shortly after the proof was published in 2005~\cite{Kra05}, the protocol was
-(somewhat famously) broken the same year~\cite{Men05}.
+It is based on the MQV family of protocols (``Hashed MQV''), some of which
+appeared in standards in the 90s.
+%
+Shortly after the proof was published at Crypto 2005~\cite{Kra05}, the protocol
+was (somewhat famously) broken the same year~\cite{Men05}.
 %
 The attacks exploit HMQV's omission of public-key validation, pointing to at
 least one flaw in the security proof where a public-key controlled by the
 attacker was assumed to be valid. (See the preface of~\cite{Kra05}.)
+
+\paragraph{OAEP.}
+%
+OAEP (``Optimzed Assymetric Encryption Padding'') is a transformation of a
+trapdoor permutation into a public-key encryption scheme. The instantiation
+most widely used today, RSA-OAEP, was standardized in 1998 (RFC 2437).
+%
+The original security proof was later (Crypto 2001) shown to be
+flawed~\cite{Sho01}. The author goes a bit further, proving there is \emph{no}
+black-box reduction from the trapdoor permutation to the security of OAEP.
+%
+However, the author also shows that the flaw does not translate into an attack
+on RSA-OAEP in particular. Interestingly, the corrected proof no longer applies
+to any trapdoor permutation, but exploits algebraic properties of RSA.
 
 
 \section{Notation}\label{sec/notation}
@@ -820,8 +836,6 @@ impl<E: SymEnc> LeftOrRight for Cpa<E> {
   \label{fig/symenc/syntax}
   \label{fig/symenc/security}
 \end{figure}
-
-
 
 
 
