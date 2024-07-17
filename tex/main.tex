@@ -70,7 +70,7 @@
 
 \end{abstract}
 
-\section{Introduction}
+\section{Introduction}\label{ref/intro}
 
 This essay accompanies a talk for
 \href{https://datatracker.ietf.org/group/ufmrg/about/}{UFMRG} at IETF 120.
@@ -80,6 +80,9 @@ observations.
 %
 All listings in this essay can be reproduced from code in the repository
 \url{https://github.com/cjpatton/better_proofs}.
+%
+For feedback, feel free to file an issue against the repository, or send me an
+email.
 
 
 \paragraph{Code-based game-playing proofs~\cite{BR06}.}
@@ -138,7 +141,7 @@ and Rogaway assessed that many security proofs of the era were ``essentially
 unverifiable''. They feared the discipline would eventually reach a ``crisis of
 rigor'' in which proofs were believed without being fully vetted, allowing
 errors in these proofs to go unnoticed. And some of these errors may belie
-attacks. (We give some examples below.)
+attacks. (We give some examples later in Section~\ref{sec/bugs}.)
 %
 %In our experience, this fear has, at least in part, come to fruition.
 
@@ -374,8 +377,8 @@ as an ideal source of uniform random coins.
 
 \paragraph{Why Rust?}
 %
-Rust easily meets two of our criteria: it is widely used at IETF and in
-production software systems.
+Rust easily meets two of our criteria from Section~\ref{sec/intro}: it is
+widely used at IETF and in production software systems.
 %
 Whether it is suitable as a specification language is debatable; I will try to
 make the case that it is, by conveying to the reader what elements of Rust are
@@ -387,9 +390,8 @@ language of the HAX toolchain (\url{https://cryspen.com/hax/}).
 HAX is used to transcribe Rust into one of many \emph{backend} languages, such
 as F* and Coq, where existing tools can be applied for various purposes.
 %
-HAX was not designed with this particular use case in mind, and based on our
-initial experiments with, it appears to not yet be complete enough to work.
-
+While HAX was not designed with this particular use case in mind, we expect it
+to amendable to our purposes, perhaps with some changes to the tool.
 
 
 \section{Example: Hybrid Encryption}\label{sec/hybrid}
