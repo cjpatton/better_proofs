@@ -53,11 +53,11 @@
 
 \begin{abstract}
 
-  For many protocols at IETF, security rests on ``pen-and-paper'' proofs that
+  The security of many protocols at IETF rests on ``pen-and-paper'' proofs that
   are difficult for humans to verify.
   %
   If the demand for provable security outpaces the capacity of human reviewers,
-  then we run the risk of missing bugs that may belie attacks.
+  then we run the risk of missing bugs in these proofs that may belie attacks.
   %
   One way to prevent this is to mechanize portions of the review process.
   %
@@ -76,9 +76,9 @@ This essay accompanies a talk for
 \href{https://datatracker.ietf.org/group/ufmrg/about/}{UFMRG} at IETF 120.
 %
 It is not a traditional research paper and is based largely on my own
-observations. Its main purpose is to gather feedback.
+observations.
 %
-All listings in this essay can be reproduced from code in
+All listings in this essay can be reproduced from code in the repository
 \url{https://github.com/cjpatton/better_proofs}.
 
 
@@ -90,8 +90,8 @@ properties of cryptographic protocols.
 In this paradigm, the security goal and execution environment are modeled as a
 \emph{game} played by the attacker. A \emph{proof} of security in this model
 relates the attacker's advantage in winning the game to the difficulty of one
-or more presumed hard problems, like breaking AES or solving discrete
-logarithms on the elliptic curve used by the protocol.
+or more presumed hard problems, like cracking AES or finding short vectors on
+the lattice used by the protocol.
 
 Games are often expressed in \emph{code} rather than natural language, making
 them amendable to the following proof strategy.
@@ -120,11 +120,10 @@ breaking some underlying assumption.
 
 In recent years, security analyses of this sort have played an increasingly
 central role in the design and analysis of protocols specified at IETF. We have
-seen working groups move from \emph{reacting} to knew attacks to
-\emph{proactively} seeking security analysis during the design
-phase~\cite{KT16}.
+seen working groups move from \emph{reacting} to attacks to \emph{proactively}
+ruling out (classes of) attacks during the design phase~\cite{KT16}.
 %
-In fact, we have even seen this process formalized in the TLS working
+In fact, this process has even been formalized in the TLS working
 group~\cite{tls13-formal-analysis-triage-panel}.
 %
 While steps like these go a long way towards preventing attacks, the provable
@@ -139,7 +138,7 @@ and Rogaway assessed that many security proofs of the era were ``essentially
 unverifiable''. They feared the discipline would eventually reach a ``crisis of
 rigor'' in which proofs were believed without being fully vetted, allowing
 errors in these proofs to go unnoticed. And some of these errors may belie
-attacks.
+attacks. (We give some examples below.)
 %
 %In our experience, this fear has, at least in part, come to fruition.
 
@@ -152,13 +151,12 @@ There are at least three exacerbating factors:
     intended for human readers. These are often called \emph{pen-and-paper}
     proofs.
     %
-    There is no ``standard'' pseudocode in use today, and the grammar and
+    There is no standard pseudocode in use today, and the grammar and
     semantics of these languages are as varied as the people that use them.
     %
     Not only does this make mechanized verification nearly impossible, it also
-    makes life difficult for human reviewers, many of whom may have a stack of
-    10 papers or more to review, each with its own unique and possibly
-    incompatible semantics.
+    makes life difficult for human reviewers, many of whom have a stack of
+    10 papers or more to get through, each with its own unique semantics.
 
   \item Protocols of interest to IETFers are becoming more complex.
     %
@@ -178,21 +176,22 @@ There are at least three exacerbating factors:
   \item Mechanization of security proofs can help reduce burden on human
     reviewers.
     %
-    Several tools exist for this, including
+    Several tools exist for this, like
     \href{https://bblanche.gitlabpages.inria.fr/CryptoVerif/}{CryptoVerif},
     \href{https://github.com/EasyCrypt/easycrypt}{EasyCrypt}, and
-    \href{https://github.com/SSProve/ssprove}{SSProve}, but these tools remain
-    somewhat inaccessible to many folks writing pen-and-paper proofs today.
+    \href{https://github.com/SSProve/ssprove}{SSProve}, but these tools
+    are inaccessible to many folks writing pen-and-paper proofs today.
     %
     There are several reasons for this.
     %
     First and foremost, cajoling the theorem prover into generating a proof is
-    in general a manual process that requires some degree of domain expertise
-    in the theory that underlies the proof assistant.
+    a manual process that requires some degree of expertise in the theory
+    underlying the tool.
     %
-    Beyond that, the requirement to learn a new, somewhat esoteric programming
-    language, tools that are specialized to specific applications or use cases,
-    and the maturity of the software itself can all be barriers to entry.
+    These tools also require learning a new, somewhat esoteric programming
+    language. They are also sometimes optimized for specific applications or
+    use cases. Finally, the maturity of the software itself can make using them
+    difficult.
 
 \end{enumerate}
 %
@@ -201,7 +200,7 @@ sustainable long term.
 %
 I believe we must find ways to reduce the cost of checking security proofs so
 that the capacity of reviewers continues to meet the demands of those
-developing cryptographic protocols in practice.
+developing cryptographic protocols for practice.
 
 %Because each of these issues is socially constructed~\cite{Rog09} to some
 %degree, we should not expect any one of them to be resolved by technical means
@@ -215,49 +214,50 @@ developing cryptographic protocols in practice.
 This essay puts forward a vision for writing security proofs for cryptographic
 protocols developed at IETF.
 %
-Proofs ought to meet to basic requirements.
+Our proofs ought to meet two basic requirements.
 %
-First, proofs must be immediately amendable to mechanized verification so that
-human verifiers need not check the full proof.
+First, they must be immediately amendable to mechanized verification so that
+human verifiers needn't check the full proof.
 %
 Second, generating proofs must not require significantly more effort or
-expertise than pen-and-paper so that human provers are not tempted to write a
-proof sketch only.
+expertise than pen-and-paper so that human provers are less more inclined to
+give the proof in full detail rather than sketch it.
 
-The key idea is simple: proofs should be written in a programming language
-that:
+The key idea is simple: games, protocols, and proofs should all be written in a
+programming language with the following properties:
 %
 \begin{enumerate}
-  \item is already in wide use at IETF;
 
-  \item is high-level enough to be suitable as a specification language. That
-    is is, the protocol can be understood without expertise in the language;
-    and
+  \item The language should already in wide use at IETF.
 
-  \item is the target language for production software so that the
-    specification itself can be more easily integrated into these systems.
+  \item The language should be high-level enough to be suitable as a
+    specification language. That is is, the protocol and its intended security
+    properties should be understandable without expertise in the language.
+
+  \item The language is already used for production software. This way the
+    effort spent on specifying the protocol translates more quickly into code
+    that is used in practice.
+
 \end{enumerate}
 %
 This is not a particularly novel idea, yet it is not an idea that has taken
-root among mast practitioners of provable security.
+root among most practitioners of provable security.
 %
 Part of the problem is the lack of a consensus language with suitable tools for
-formal methods. As I will try to illustrate here, we may be on the cusp of a
-solution.
+formal methods. As I will try to illustrate here, this situation seems to be
+changing.
 
 The potential benefit of writing game-playing proofs in an actual code rather
-than pseudocode is that it creates a \emph{separation of concerns} that results
-in higher quality and more efficient collaborations across disciplines.
+than pseudocode is that it creates a \emph{separation of concerns}.
 %
 On one end of the assembly line, the \emph{subject matter expert} specifies the
 security game and protocol and generates the proof, consisting of the game
-rewrites and reductions. Ideally, this requires no knowledge of formal methods,
-only the specification language.
+rewrites and reductions. Ideally, this requires no knowledge of formal methods.
 %
 On the other end of the assembly line, the \emph{formal methods expert}
 verifies correctness of each of the rewrites. Ideally, this amounts to checking
-equivalence of programs written in the specification language and requires no
-knowledge about the details of the application.
+equivalence of programs written in the specification language and requires only
+limited knowledge of the application.
 
 Other benefits to this approach:
 
@@ -265,15 +265,15 @@ Other benefits to this approach:
   \item Those of us IETFers who write security proofs as well as software will
     discover some surprising benefits of this approach.
     %
-    For example, imagine you have written a proof and pseudocode and find you
+    For example, imagine you have written a proof in pseudocode and find you
     need to go back and tweak the definition: the process of propagating that
-    tweak through the proof is both time-intensive and error-prone. Having a
-    compiler with a type checker and a set of high-quality unit tests can make
-    this much more sane.
+    tweak through the proof (in practice, a pile of hand-written \LaTeX) is
+    both time-intensive and error-prone. Having a compiler with a type checker
+    and a set of high-quality unit tests can make this much more sane.
 
-  \item Cryptographers spend a large amount of energy working on definitions.
+  \item Cryptographers sometimes spend enormous energy working on definitions.
     Much of this time is spent probing for ``trivial'' distinguishers or
-    winning conditions that would suggest the attacker is too powerful or not
+    winning conditions that suggest the attacker is too powerful or not
     captured in the right way.
     %
     Writing such definitions in code might make it possible to formalize such
@@ -282,63 +282,74 @@ Other benefits to this approach:
     \href{https://bblanche.gitlabpages.inria.fr/proverif/}{ProVerif}.
 \end{itemize}
 
+Note that this proposal is grounded in extensive experience writing
+pen-and-paper proofs (sometimes with bugs!), but no professional experience
+with mechanized verification or other formal methods.
+%
+It may be that I've massively underestimated how much work is being delegated
+to formal methods.
+
 \paragraph{Outline.}
 %
-In this essay study a few elementary examples of security proofs from the
-cryptographic literature, transcribing them into a high-level programming
-language.
+By way of illustrating this proposal, this essay presents a few elementary
+examples of security proofs from the cryptographic literature, transcribing
+them into a high-level programming language.
 %
 These examples illustrate the kind of work carried out by the \emph{subject
 matter expert}; the task of the \emph{formal methods expert} is to prove each
-claim (written as \textbf{Claim}) in the body of the proof.
-%
-Section~\ref{sec/hybrid} recalls the simple hybrid, public-key encryption
-scheme from Mike Rosulek's ``Joy of Cryptography''`~\cite{joy} and proves it
+claim (written as ``\textbf{Claim}'') in the body of the proof.
 
+Section~\ref{sec/hybrid} recalls the simple hybrid, public-key encryption
+scheme from Mike Rosulek's ``Joy of Cryptography''~\cite{joy} and its proof of
+security under chosen plaintext attack.
+%
+Section~\ref{sec/switching} considers the PRP/PRF switching lemma, a bit of
+folklore that is well-known among cryptographers.
+%
 These examples illustrate three common game rewrites:
 %
 \emph{equivalent-rewrite}, in which the new code is semantically equivalent
 (useful for setting up the next step in the proof);
 %
 \emph{equivalent-by-reduction}, in which a distinguisher is reduced to a
-distinguisher of a simpler game; and
+distinguisher for a simpler game; and
 %
 \emph{equivalent-until-bad}, in which the new game is equivalent up to some
 distinguishing, ``bad'' event~\cite{BR06}.
 
+We begin in Section~\ref{sec/bugs} with a brief (and incomplete) overview of
+some documented cases of bugs in security proofs.
+%
+We then describe our notation and conventions (Section~\ref{sec/notation})
+before diving into examples.
 
 \paragraph{What about UC?}
 %
-While we focus on game-playing proofs, the same idea can be applied to what is
-often called the \emph{simulation paradigm}. Here security is defined relative
-to some \emph{ideal functionality}, and we say the protocol \emph{realizes}
-that ideal functionality if, for every attacker, there exists a simulator such
-that the adversary's interaction with the real system is indistinguishable from
-the simulator's interaction with the ideal functionality.
-%
+While we focus on game-playing proofs in this essay, the same proposal can be
+applied to what is often called the \emph{simulation paradigm}. Here security
+is defined relative to some \emph{ideal functionality}, and we say the protocol
+\emph{realizes} that ideal functionality if, for every attacker, there exists a
+simulator such that the adversary's interaction with the real system is
+indistinguishable from the simulator's interaction with the ideal
+functionality.
+
 There is no fundamental difference between simulation- and game-based
 definitions that makes mechanization of proofs in one paradigm harder than the
 other.
 %
-However, the details of popular simulation frameworks, like UC
-framework~\cite{Can01}, can be rather involved, making mechanization more
+However, the details of popular simulation frameworks, like the UC
+framework~\cite{Can01}, can be rather involved, making mechanized proofs more
 difficult~\cite{CSV19}.
 %
 Games are an attractive target merely because the details of the model are
-explicit and often simpler.
+explicit.
+
+\section{Bugs in Security Proofs}\label{sec/bugs}
+
+XXX
 
 
-\paragraph{Caveat.}
-%
-You will find this proposal is somewhat opinionated: it is grounded in
-extensive experience writing pen-and-paper proofs (sometimes with bugs!), but
-no practical experience with mechanized verification or other formal methods.
-%
-It may be that I'm massively underestimating how much work is being delegated
-to formal methods.
-
-
-\section{Notation}
+\section{Notation}\label{sec/notation}
 
 All algorithms, including games and adversaries, are Rust
 (\url{https://www.rust-lang.org/}) programs without asynchronous semantics
@@ -378,6 +389,16 @@ as F* and Coq, where existing tools can be applied for various purposes.
 %
 HAX was not designed with this particular use case in mind, and based on our
 initial experiments with, it appears to not yet be complete enough to work.
+
+
+
+\section{Example: Hybrid Encryption}\label{sec/hybrid}
+
+We first consider the hybrid public-key encryption (PKE) scheme of
+\cite[Chapter~15]{joy}.
+%
+The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
+and \emph{equivalent-by-reduction}.
 
 
 \begin{figure}[t]
@@ -430,17 +451,8 @@ impl<E: SymEnc> LeftOrRight for PubCpa<E> {
 \end{figure}
 
 
-\section{Example: Hybrid Encryption}\label{sec/hybrid}
-
-We first consider the hybrid public-key encryption (PKE) scheme of
-\cite[Chapter~15]{joy}.
+\paragraph{Syntax.}
 %
-The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
-and \emph{equivalent-by-reduction}.
-
-
-\subsection{Syntax}
-
 A PKE scheme implements the $\code{PubEnc}$ trait listed in
 Figure~\ref{fig/pubenc/syntax}.
 %
@@ -463,8 +475,8 @@ We say $\code{enc}$ is \emph{correct} if for all $\code{m} \in
 \]
 
 
-\subsection{Security}
-
+\paragraph{Security.}
+%
 Security under chosen plaintext attack (CPA) is defined by the $\code{PubCpa}$
 game in Figure~\ref{fig/pubenc/security}.
 %
