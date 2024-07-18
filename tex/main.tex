@@ -347,7 +347,7 @@ difficult~\cite{CSV19}.
 Games are an attractive target merely because the details of the model are
 explicit.
 
-\section{Bugs in Security Proofs}\label{sec/bugs}
+\section{Bugs in Pen-and-paper Proofs}\label{sec/bugs}
 
 \paragraph{OCB2.}
 %
@@ -408,22 +408,23 @@ to any trapdoor permutation, but exploits algebraic properties of RSA.
 
 \paragraph{The author's own work.}
 %
-A paper by the author tries to formalize conditions under which key reuse
-across different protocols is safe~\cite{PS19}. (For example, consider the
+One of my own papers tries to formalize conditions under which key reuse
+across different protocols is safe~\cite{PS19}. For example, consider the
 problem of securely using an already deployed ECDSA secret key as a static
-Diffie-Hellman key in another protocol.)
+Diffie-Hellman key in another protocol.
 %
 The main ``result'' of this paper gives a sufficient condition under which
 security of a given application is maintained in the presence of key reuse.
 %
 The published version (Crypto 2019) contains a flaw related to the
-programmability of the random oracle by the simulator.
+programmability of the random oracle by the simulator which invalidates the
+main theorem.
 %
 This was discovered by an anonymous reviewer of a follow-up paper (Crypto
 2020~\cite{PS20}) in a more general context.
 %
-Additional issues were pointed out a few years later, but the paper~\cite{PS19}
-has not yet been updated to address them. (This is work in progress!)
+Additional issues were pointed out a few years later, but as of this writing, I
+have not yet updated the paper to address them. (This is work in progress!)
 
 
 \section{Notation}\label{sec/notation}
