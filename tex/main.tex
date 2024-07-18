@@ -351,21 +351,20 @@ explicit.
 
 \paragraph{OCB2.}
 %
-OCB2 (``Offset Code Book'') is a blockipher mode of operation that provides for
-authenticated encryption standardized by ISO in 2009 (ISO/IEC 19772:2009). In
-2018~\cite{IIMP19}, an existential forgery attack against OCB2 was
-demonstrated, exploiting a detail of the construction that was overlooked in
-the original security analysis.
+OCB2 (``Offset Code Book'') is a symmetric, authenticated encryption scheme
+standardized by ISO in 2009 (ISO/IEC 19772:2009). In 2018~\cite{IIMP19}, an
+existential forgery attack against OCB2 was demonstrated that exploited a detail
+of the construction that was overlooked in the original security analysis.
 %
-The attack is simple and efficient, and with a bit more work, it can be
-improved into a total break of both authenticity and confidentiality.
+The attack is simple and efficient and, with a bit of work, can be improved
+into a total break of both authenticity and confidentiality.
 %
 Note that its successor, OCB3 (RFC 7253), is not vulnerable to the same class
 of attacks.
 
 \paragraph{GCM.}
 %
-GCM (``Galois Counter Mode'') is another mode of operation for blockciphers
+GCM (``Galois Counter Mode'') is a symmetric, authenticated encryption scheme
 that has been recommended by NIST since 2007 and is widely used at IETF and
 beyond.
 %
@@ -375,7 +374,7 @@ contradicts the concrete security claimed by the existing security proof.
 The attack does not result in a total break. In fact, the authors describe an
 alternative proof with slightly looser security.
 %
-This does, however, impact the safety limits for GCM~\cite{irtf-cfrg-aead-limits-08}.
+It does, however, impact the safety limits for GCM~\cite{irtf-cfrg-aead-limits-08}.
 
 \paragraph{HMQV.}
 %
@@ -384,7 +383,7 @@ key exchange, being one of the earliest such protocols with a provable security
 treatment.
 %
 It is based on the MQV family of protocols (``Hashed MQV''), some of which
-appeared in standards in the 90s.
+appeared in various standards in the 1990s.
 %
 Shortly after the proof was published at Crypto 2005~\cite{Kra05}, the protocol
 was (somewhat famously) broken the same year~\cite{Men05}.
@@ -399,11 +398,11 @@ OAEP (``Optimzed Assymetric Encryption Padding'') is a transformation of a
 trapdoor permutation into a public-key encryption scheme. The instantiation
 most widely used today, RSA-OAEP, was standardized in 1998 (RFC 2437).
 %
-The original security proof was later (Crypto 2001) shown to be
-flawed~\cite{Sho01}. The author goes a bit further, proving there is \emph{no}
+The original security proof (Eurocrypt 1994) was later shown by Victor Shoup to
+be flawed~\cite{Sho01}. Shoup goes a bit further, proving there is \emph{no}
 black-box reduction from the trapdoor permutation to the security of OAEP.
 %
-However, the author also shows that the flaw does not translate into an attack
+However, the paper also shows that the flaw does not translate into an attack
 on RSA-OAEP in particular. Interestingly, the corrected proof no longer applies
 to any trapdoor permutation, but exploits algebraic properties of RSA.
 
