@@ -91,40 +91,41 @@ Game playing is a well-known paradigm for establishing computational security
 properties of cryptographic protocols.
 %
 In this paradigm, the security goal and execution environment are modeled as a
-\emph{game} played by the attacker. A \emph{proof} of security in this model
-relates the attacker's advantage in winning the game to the difficulty of one
-or more presumed hard problems, like cracking AES or finding short vectors on
-the lattice used by the protocol.
+\emph{game} played by the attacker. A \emph{proof} of security relates the
+attacker's advantage in winning the game to the difficulty of one or more
+presumed hard problems, like cracking AES or finding short vectors on the
+lattice used by the protocol.
 
 Games are often expressed in \emph{code} rather than natural language, making
 them amendable to the following proof strategy.
 %
-The proof consists of a sequence of games (sometimes called \emph{hybrids})
-beginning with the game that defines security.
+The proof consists of a finite sequence of games (sometimes called
+\emph{hybrids}) beginning with the game that defines security.
 %
 Each game is obtained by rewriting the code of the previous one until, in the
 final game, the attacker interacts with some idealized system that it has no
 hope of breaking.
 
-The security proof establishes that, for each pair of neighboring games, the
-probability of an attacker in distinguishing between them is negligible.
+The proof establishes that, for each pair of neighboring games, the probability
+of an attacker in distinguishing between them is negligible.
 %
-This is established in various ways:
+This is done in various ways:
 %
 sometimes a \emph{rewrite} (also called a \emph{hop} or \emph{transition})
 results in a game that is semantically equivalent, in which case no attacker
 can distinguish them;
 %
-others rewrites result in distinguishable events that occur only with small
+other rewrites result in distinguishable events that occur only with small
 probability, such as a collision in the range of a random oracle;
 %
 still others are bounded computationally, by reducing some assumed hard problem
-to a distinguisher.
+to a distinguisher between the games.
 
-In recent years, security analyses of this sort have played an increasingly
-central role in the design and analysis of protocols specified at IETF. We have
-seen working groups move from \emph{reacting} to attacks to \emph{proactively}
-ruling out (classes of) attacks during the design phase~\cite{KT16}.
+In recent years, provable security in general and game-playing proofs in
+particular have played an increasingly central role in the design and analysis
+of protocols specified at IETF. We have seen working groups move from
+\emph{reacting} to attacks to \emph{proactively} ruling out (classes of)
+attacks during the design phase~\cite{KT16}.
 %
 In fact, this process has even been formalized in the TLS working
 group~\cite{tls13-formal-analysis-triage-panel}.
@@ -141,7 +142,7 @@ and Rogaway assessed that many security proofs of the era were ``essentially
 unverifiable''. They feared the discipline would eventually reach a ``crisis of
 rigor'' in which proofs were believed without being fully vetted, allowing
 errors in these proofs to go unnoticed. And some of these errors may belie
-attacks. (We give some examples later in Section~\ref{sec/bugs}.)
+attacks, as has happened from time to time (see Section~\ref{sec/bugs}).
 %
 %In our experience, this fear has, at least in part, come to fruition.
 
@@ -163,9 +164,9 @@ There are at least three exacerbating factors:
 
   \item Protocols of interest to IETFers are becoming more complex.
     %
-    First, we are seeing our community do more with cryptography, often going
-    beyond well-studied goals like key exchange, authentication, and
-    encryption.
+    First, we are seeing our community do more with cryptography than ever
+    before, often going beyond well-studied goals like key exchange,
+    authentication, and encryption.
     %
     Second, as attackers get more sophisticated, so must our security definitions
     capture the real execution environment in greater fidelity.
@@ -191,10 +192,9 @@ There are at least three exacerbating factors:
     a manual process that requires some degree of expertise in the theory
     underlying the tool.
     %
-    These tools also require learning a new, somewhat esoteric programming
-    language. They are also sometimes optimized for specific applications or
-    use cases. Finally, the maturity of the software itself can make using them
-    difficult.
+    Other problems include: the requirement to learn a new, somewhat esoteric
+    programming language; great support for specific applications or use cases,
+    but not for others; and the maturity of the software itself.
 
 \end{enumerate}
 %
@@ -203,7 +203,7 @@ sustainable long term.
 %
 I believe we must find ways to reduce the cost of checking security proofs so
 that the capacity of reviewers continues to meet the demands of those
-developing cryptographic protocols for practice.
+developing cryptographic protocols, at IETF and beyond.
 
 %Because each of these issues is socially constructed~\cite{Rog09} to some
 %degree, we should not expect any one of them to be resolved by technical means
@@ -214,44 +214,45 @@ developing cryptographic protocols for practice.
 
 \paragraph{Proposal.}
 %
-This essay puts forward a vision for writing security proofs for cryptographic
-protocols developed at IETF.
+%This essay puts forward a vision for writing security proofs for cryptographic
+%protocols developed at IETF.
 %
 Our proofs ought to meet two basic requirements.
 %
-First, they must be immediately amendable to mechanized verification so that
+First, they should be immediately amendable to mechanized verification so that
 human verifiers needn't check the full proof.
 %
-Second, generating proofs must not require significantly more effort or
-expertise than pen-and-paper so that human provers are less more inclined to
-give the proof in full detail rather than sketch it.
+Second, generating proofs should not require significantly more effort or
+expertise than pen-and-paper so that human provers are more inclined to flesh
+it out in full detail.
 
 The key idea is simple: games, protocols, and proofs should all be written in a
-programming language with the following properties:
+proper programming language rather than pseudocode. The language should have
+the following properties:
 %
 \begin{enumerate}
 
-  \item The language should already in wide use at IETF.
+  \item It should already be in wide use at IETF.
 
-  \item The language should be high-level enough to be suitable as a
-    specification language. That is is, the protocol and its intended security
-    properties should be understandable without expertise in the language.
+  \item It should be high-level enough to be suitable as a specification
+    language. That is is, the protocol and its intended security properties
+    should be understandable without expertise in the language.
 
-  \item The language is already used for production software. This way the
-    effort spent on specifying the protocol translates more quickly into code
-    that is used in practice.
+  \item It should already be used for production software. This way the effort
+    spent on specifying the protocol can translate more quickly into code that is
+    used in practice.
 
 \end{enumerate}
 %
 This is not a particularly novel idea, yet it is not an idea that has taken
 root among most practitioners of provable security.
 %
-Part of the problem is the lack of a consensus language with suitable tools for
-formal methods. As I will try to illustrate here, this situation seems to be
-changing.
+Part of the problem is the lack of a consensus language and corresponding tools
+for verifying proofs. However, as I will try to illustrate here, this situation
+may be changing.
 
-The potential benefit of writing game-playing proofs in an actual code rather
-than pseudocode is that it creates a \emph{separation of concerns}.
+The benefit of writing game-playing proofs in actual code is that it creates a
+\emph{separation of concerns}.
 %
 On one end of the assembly line, the \emph{subject matter expert} specifies the
 security game and protocol and generates the proof, consisting of the game
@@ -261,7 +262,7 @@ On the other end of the assembly line, the \emph{formal methods expert}
 verifies correctness of each of the rewrites. Ideally, this amounts to checking
 equivalence of programs written in the specification language and requires only
 limited knowledge of the application.
-
+%
 Other benefits to this approach:
 
 \begin{itemize}
@@ -279,7 +280,7 @@ Other benefits to this approach:
     winning conditions that suggest the attacker is too powerful or not
     captured in the right way.
     %
-    Writing such definitions in code might make it possible to formalize such
+    Writing such definitions in code makes it possible to formalize such
     conditions symbolically in tools like
     \href{https://tamarin-prover.com/}{Tamarin} or
     \href{https://bblanche.gitlabpages.inria.fr/proverif/}{ProVerif}.
@@ -300,11 +301,10 @@ them into a high-level programming language.
 %
 These examples illustrate the kind of work carried out by the \emph{subject
 matter expert}; the task of the \emph{formal methods expert} is to prove each
-claim (written as ``\textbf{Claim}'') in the body of the proof.
+claim (written as ``\textbf{Claim}'') in the body of the each proof.
 
-Section~\ref{sec/hybrid} recalls the simple hybrid, public-key encryption
-scheme from Mike Rosulek's ``Joy of Cryptography''~\cite{joy} and its proof of
-security under chosen plaintext attack.
+Section~\ref{sec/hybrid} recalls the simple hybrid public-key encryption scheme
+and its security proof from Mike Rosulek's ``Joy of Cryptography''~\cite{joy}.
 %
 Section~\ref{sec/switching} considers the PRP/PRF switching lemma, a bit of
 folklore that is well-known among cryptographers.
@@ -318,7 +318,7 @@ These examples illustrate three common game rewrites:
 a distinguisher between the games; and
 %
 \emph{equivalent-until-bad}, in which the new game is equivalent up to some
-distinguishing, ``bad'' event~\cite{BR06}.
+distinguishing, ``bad'' event.
 
 We begin in Section~\ref{sec/bugs} with a brief (and incomplete) overview of
 some documented cases of bugs in security proofs.
@@ -329,13 +329,12 @@ before diving into examples.
 \paragraph{What about UC?}
 %
 While we focus on game-playing proofs in this essay, the same proposal can be
-applied to what is often called the \emph{simulation paradigm}. Here security
-is defined relative to some \emph{ideal functionality}, and we say the protocol
-\emph{realizes} that ideal functionality if, for every attacker, there exists a
-simulator such that the adversary's interaction with the real system is
-indistinguishable from the simulator's interaction with the ideal
-functionality.
-
+applied to the \emph{simulation paradigm}. Here security is defined relative to
+some \emph{ideal functionality}, and we say the protocol \emph{realizes} that
+ideal functionality if, for every attacker, there exists a simulator such that
+the adversary's interaction with the real system is indistinguishable from the
+simulator's interaction with the ideal functionality.
+%
 There is no fundamental difference between simulation- and game-based
 definitions that makes mechanization of proofs in one paradigm harder than the
 other.
@@ -344,17 +343,18 @@ However, the details of popular simulation frameworks, like the UC
 framework~\cite{Can01}, can be rather involved, making mechanized proofs more
 difficult~\cite{CSV19}.
 %
-Games are an attractive target merely because the details of the model are
-explicit.
+Games are a good place to start because the details of the execution model are
+always explicit.
 
 \section{Bugs in Pen-and-paper Proofs}\label{sec/bugs}
 
 \paragraph{OCB2.}
 %
-OCB2 (``Offset Code Book'') is a symmetric, authenticated encryption scheme
-standardized by ISO in 2009 (ISO/IEC 19772:2009). In 2018~\cite{IIMP19}, an
-existential forgery attack against OCB2 was demonstrated that exploited a detail
-of the construction that was overlooked in the original security analysis.
+OCB2 (``Offset Code Book 2'') is a symmetric, authenticated encryption scheme
+that was standardized by ISO in 2009 (ISO/IEC 19772:2009). In
+2018~\cite{IIMP19}, an existential forgery attack against OCB2 was demonstrated
+that exploited a detail of the construction that was overlooked in the original
+security analysis.
 %
 The attack is simple and efficient and, with a bit of work, can be improved
 into a total break of both authenticity and confidentiality.
@@ -371,8 +371,8 @@ beyond.
 In 2012~\cite{IOM12}, an efficient distinguisher was discovered that
 contradicts the concrete security claimed by the existing security proof.
 %
-The attack does not result in a total break. In fact, the authors describe an
-alternative proof with slightly looser security.
+However, the attack does not result in a total break, and in fact the authors
+describe an alternative proof with slightly looser security.
 %
 It does, however, impact the safety limits for GCM~\cite{irtf-cfrg-aead-limits-08}.
 
@@ -382,14 +382,14 @@ The HMQV protocol is a well-known milestone in the evolution of authenticated
 key exchange, being one of the earliest such protocols with a provable security
 treatment.
 %
-It is based on the MQV family of protocols (``Hashed MQV''), some of which
-appeared in various standards in the 1990s.
+It is based on the MQV family of protocols (hence ``Hashed MQV''), some of
+which appeared in various standards in the 1990s.
 %
-Shortly after the proof was published at Crypto 2005~\cite{Kra05}, the protocol
-was (somewhat famously) broken the same year~\cite{Men05}.
+Shortly after the proof was published (Crypto 2005~\cite{Kra05})j, the protocol
+was broken the same year~\cite{Men05}.
 %
 The attacks exploit HMQV's omission of public-key validation, pointing to at
-least one flaw in the security proof where a public-key controlled by the
+least one flaw in the security proof where a public key controlled by the
 attacker was assumed to be valid. (See the preface of~\cite{Kra05}.)
 
 \paragraph{OAEP.}
@@ -398,20 +398,21 @@ OAEP (``Optimzed Assymetric Encryption Padding'') is a transformation of a
 trapdoor permutation into a public-key encryption scheme. The instantiation
 most widely used today, RSA-OAEP, was standardized in 1998 (RFC 2437).
 %
-The original security proof (Eurocrypt 1994) was later shown by Victor Shoup to
-be flawed~\cite{Sho01}. Shoup goes a bit further, proving there is \emph{no}
-black-box reduction from the trapdoor permutation to the security of OAEP.
+The original security proof (Eurocrypt 1994~\cite{BR94}) was later shown by to
+be flawed~\cite{Sho01}. The paper goes a bit further, proving there is no
+\emph{black-box} reduction from a trapdoor permutation to the security of
+OAEP.
 %
 However, the paper also shows that the flaw does not translate into an attack
-on RSA-OAEP in particular. Interestingly, the corrected proof no longer applies
-to any trapdoor permutation, but exploits algebraic properties of RSA.
+on RSA-OAEP in particular: the original proof can be corrected, but the
+corrected proof makes use of algebraic properties of RSA.
 
 \paragraph{The author's own work.}
 %
-One of my own papers tries to formalize conditions under which key reuse
-across different protocols is safe~\cite{PS19}. For example, consider the
-problem of securely using an already deployed ECDSA secret key as a static
-Diffie-Hellman key in another protocol.
+One of my own papers tries to formalize conditions under which key reuse across
+protocols is safe~\cite{PS19}. For example, consider the problem of securely
+using an already deployed ECDSA secret key as a static Diffie-Hellman key in
+another protocol.
 %
 The main ``result'' of this paper gives a sufficient condition under which
 security of a given application is maintained in the presence of key reuse.
@@ -463,10 +464,13 @@ Another important reason for choosing Rust is that it is the specification
 language of the HAX toolchain (\url{https://cryspen.com/hax/}).
 %
 HAX is used to transcribe Rust into one of many \emph{backend} languages, such
-as F* and Coq, where existing tools can be applied for various purposes.
+as F* or Coq, where existing tools can be applied for various purposes.
 %
-While HAX was not designed with this particular use case in mind, we expect it
-to amendable to our purposes, perhaps with some changes to the tool.
+HAX is gaining momentum,\footnote{It was recently used to produce a verified,
+fast implementation of ML-KEM: see
+\url{https://cryspen.com/post/ml-kem-implementation/}.} and while it was not
+designed with this particular use case in mind, I have not yet found a good
+reason why it can't be, with some modifications.
 
 
 \section{Example: Hybrid Encryption}\label{sec/hybrid}

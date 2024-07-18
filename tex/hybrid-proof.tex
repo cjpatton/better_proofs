@@ -396,7 +396,7 @@ Let $B = R_{\code{23}}^A$.
 Define $C$ as follows. Flip a coin: if the outcome is $\code{false}$, then run
 $R_{\code{12}}^A$; if the outcome is $\code{true}$, then run $R_{\code{34}}^A$.
 %
-Applying the law of total probability,
+Applying the law of total probability, we obtain
 %
 % adv(C) = pr(C|left) - pr(C|right)
 %        = 1/2 pr(R12|left) + 1/2 pr(R34|left) - (1/2 pr(R12|right) + 1/2 pr(R34|right))
@@ -409,4 +409,4 @@ Applying the law of total probability,
   = 2\cdot \Adv{cpa}_\code{pub_cpa}(C) \,.
 \]
 %
-The claimed bound follows.
+And that's the way it is!
