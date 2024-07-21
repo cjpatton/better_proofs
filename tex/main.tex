@@ -431,10 +431,9 @@ have not yet updated the paper to address them. (This is work in progress!)
 \section{Notation}\label{sec/notation}
 
 All algorithms, including games and adversaries, are Rust
-(\url{https://www.rust-lang.org/}) programs without asynchronous semantics
-(i.e., with the $\code{async}$ and $\code{await}$ key words
-removed).\footnote{Asynchronous Rust is excluded because it is not needed to
-formalize execution of games.}
+(\url{https://www.rust-lang.org/}) programs without asynchronous semantics or unsafe code
+(i.e., with the $\code{async}$, $\code{await}$, and $\code{unsafe}$ keywords
+removed).
 %
 By convention, an adversary's runtime includes the time it takes to initialize
 its game and evaluate its oracle queries.
