@@ -162,10 +162,8 @@ directly, it invokes $\code{game.left_or_right()}$ and uses the response to
 produce the ciphertext. (See line 50.) This way the reduction simulaters
 $\code{G1}$ when $\code{game.left == false}$ and $\code{G2}$ otherwise.
 
-Let $R_{\code{12}}^A(\code{game}) =
-A\code{.play(FromHybridToPubEnc::init(game), sym_enc, false))}$.
 %
-We wave the following.
+%We wave the following.
 %
 %\cp{Here again is a step that we need to prove formally. Like the previous
 %claim, our goal is to prove that two pieces of code are equivalent.}
@@ -179,8 +177,11 @@ We wave the following.
   and
   \[
     \Prob{A\code{.play(G2::init(hybrid))}} =
-    \Prob{R_{\code{12}}^A(\code{PubEnc::init(pub_enc, true)})} \,.
+    \Prob{R_{\code{12}}^A(\code{PubEnc::init(pub_enc, true)})} \,,
   \]
+  %
+  where $R_{\code{12}}^A(\code{game}) =
+  A\code{.play(FromHybridToPubEnc::init(game), sym_enc, false))}$.
 \end{claim}
 %
 Then by definition,
