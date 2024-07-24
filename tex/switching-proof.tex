@@ -56,7 +56,7 @@ next step. In particular, the sampled point, denoted $\code{y}$, is stored in a
 set $\code{range}$: if ever $\code{y}$ is already in $\code{range}$, then the
 game sets a flag called $\code{bad}$, but otherwise proceeds as usual.
 
-\begin{claim}[Equivalent-rewrite]
+\begin{claim}[Indistinguishable-rewrite]
   For all $A$,
   \[
      \Prob{A\code{.play(RandFunc::default())}} =
@@ -91,7 +91,7 @@ is a collision in the range, then~$\code{y}$ is rejected and we try again.
 %
 Let $\bad = A\code{.play_then_return(G2::default()).bad}$.
 %
-\begin{claim}[Equivalent-until-bad]
+\begin{claim}[Indistinguishable-until-bad]
   For all $A$,
   \[
      \Prob{A\code{.play(G1::default())}} -
@@ -105,7 +105,7 @@ Finally, game $\code{G2}$ is equivalent to
 \hyperref[sec/func/ideal]{$\code{RandPerm}$}. Namely, the latter is obtained
 from the former by negating the condition and re-arranging the code.
 %
-\begin{claim}[Equivalent-rewrite]
+\begin{claim}[Indistinguishable-rewrite]
   For all $A$,
   \[
      \Prob{A\code{.play(G2::default())}} =

@@ -48,7 +48,7 @@ the $\code{LeftOrRight}$ oracle, and adding code for generating a new temporary
 key, $\code{_tk_right}$. Let us call this new key (unused for the moment) the
 ``right key'' and the existing key the ``left key''.
 %
-\begin{claim}[Equivalent-rewrite]
+\begin{claim}[Indistinguishable-rewrite]
   For all $A$,
   \[
      \Prob{A\code{.play(PubCpa::init(hybrid, false))}} =
@@ -373,7 +373,7 @@ Then by definition,
 Finally, game $\code{G4}$ is equivalent to $\code{PubCpa}$ with $\code{right ==
 true}$.
 %
-\begin{claim}[Equivalent-rewrite]
+\begin{claim}[Indistinguishable-rewrite]
   For all $A$,
   \[
      \Prob{A\code{.play(G1::init(hybrid))}} =

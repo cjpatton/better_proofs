@@ -311,14 +311,14 @@ folklore that is well-known among cryptographers.
 %
 These examples illustrate three common game rewrites:
 %
-\emph{equivalent-rewrite}, in which the new code is semantically equivalent
-(useful for setting up the next step in the proof);
+\emph{indistinguishable-rewrite}, in which the new code is semantically
+equivalent (useful for setting up the next step in the proof);
 %
-\emph{reduction}, in which an assumed hard problem is reduced to
-a distinguisher between the games; and
+\emph{reduction}, in which an assumed hard problem is reduced to a
+distinguisher between the games; and
 %
-\emph{equivalent-until-bad}, in which the new game is equivalent up to some
-distinguishing, ``bad'' event.
+\emph{indistinguishable-until-bad}, in which the new game is equivalent up to
+some distinguishing, ``bad'' event.
 
 We begin in Section~\ref{sec/bugs} with a brief (and incomplete) overview of
 some documented cases of bugs in security proofs.
@@ -477,8 +477,8 @@ reason why it can't be, with some modifications.
 We first consider the hybrid public-key encryption (PKE) scheme of
 \cite[Chapter~15]{joy}.
 %
-The proof demonstrates two types of game transitions: \emph{equivalent-rewrite}
-and \emph{reduction}.
+The proof demonstrates two types of game transitions:
+\emph{indistinguishable-rewrite} and \emph{reduction}.
 
 
 \begin{figure}[t]
@@ -702,7 +702,7 @@ In this section we fix the PRP/PRF switching lemma~\cite{BR06}, which states
 that a good pseudorandom permutation (PRP) is a good pseudorandom function
 (PRF) up to birthday attacks.
 %
-The proof demonstrates the \emph{equivalent-until-bad} transition.
+The proof demonstrates the \emph{indistinguishable-until-bad} transition.
 
 \begin{figure}[t]
 \begin{lstlisting}
